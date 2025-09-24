@@ -1,2 +1,30 @@
 @import 'tailwindcss';
 @plugin 'daisyui';
+
+/* View Transitions */
+@view-transition {
+	navigation: auto;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 0.3s;
+}
+
+::view-transition-old(channel-card),
+::view-transition-new(channel-card) {
+	animation-duration: 0.4s;
+}
+
+::view-transition-old(channel-avatar),
+::view-transition-new(channel-avatar) {
+	animation-duration: 0.5s;
+}
+
+.channel-card {
+	view-transition-name: channel-card;
+}
+
+.channel-avatar {
+	view-transition-name: channel-avatar;
+}

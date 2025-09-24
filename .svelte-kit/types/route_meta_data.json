@@ -3,5 +3,8 @@
 	"/api/export": [
 		"src/routes/api/export/+page.server.ts"
 	],
+	"/channel/[id]": [
+		"src/routes/channel/[id]/+page.ts"
+	],
 	"/privacy-policy": []
 }
