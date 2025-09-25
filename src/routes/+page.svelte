@@ -13,16 +13,8 @@
 		form: ActionData;
 	}
 
-	let searchTimeout = 0;
-
-	let { data, form }: Props = $props();
-
-	let searchTerm = $state($page.url.searchParams.get('name') || '');
-	let selectedBias = $state($page.url.searchParams.get('bias') || '');
-	let searchResults: Channel[] = $state(data.channels || []);
-	let loading = $state(false);
-
-	const biasOptions = [
+	const SEARCH_DEBOUNCE_MS = 300;
+	const BIAS_OPTIONS = [
 		{ value: '🇺🇸', label: 'United States' },
 		{ value: '🇪🇺', label: 'European Union' },
 		{ value: '🇬🇧', label: 'United Kingdom' },
@@ -30,6 +22,14 @@
 		{ value: '🇨🇦', label: 'Canada' },
 		{ value: '🌍', label: 'Global' }
 	];
+
+	let { data, form }: Props = $props();
+
+	let searchTimeout = 0;
+	let searchTerm = $state($page.url.searchParams.get('name') || '');
+	let selectedBias = $state($page.url.searchParams.get('bias') || '');
+	let searchResults: Channel[] = $state(data.channels || []);
+	let loading = $state(false);
 
 	// Update results when form data changes
 	$effect(() => {
@@ -45,178 +45,191 @@
 		}
 	});
 
-	function handleSubmit() {
+	function handleFormSubmit() {
 		loading = true;
 		return async ({ update }) => {
 			await update();
 			loading = false;
 		};
 	}
+
+	function debounceSearch() {
+		clearTimeout(searchTimeout);
+		searchTimeout = setTimeout(() => {
+			document.querySelector('form')?.requestSubmit();
+		}, SEARCH_DEBOUNCE_MS);
+	}
+
+	const showEmptyState = $derived(
+		!loading && searchResults.length === 0 && (searchTerm || selectedBias)
+	);
 </script>
 
 <svelte:head>
 	<title>Telegram Channel Search</title>
-	<meta name="description" content="Search for Telegram channels by name and bias" />
+	<meta name="description" content="Search for Telegram channels by name and region" />
 	<meta name="view-transition" content="same-origin" />
 </svelte:head>
 
-<div
-	class="min-h-screen bg-gradient-to-br from-pink-500 via-green-400 via-purple-500 to-orange-500 p-4"
->
-	<div class="mx-auto max-w-4xl">
+<div class="from-primary via-secondary via-accent to-warning min-h-screen bg-gradient-to-br">
+	<div class="container mx-auto px-4 py-8">
 		<!-- Header -->
-		<div class="mb-8 text-center sm:mb-12">
-			<h1 class="mb-3 text-3xl font-bold text-white drop-shadow-lg sm:mb-4 sm:text-4xl">
+		<header class="mb-12 text-center">
+			<h1 class="mb-4 text-4xl font-bold text-white drop-shadow-lg md:text-5xl">
 				Telegram Channel Search
 			</h1>
 			<a
 				href="https://t.me/nyx_news"
 				target="_blank"
 				rel="noopener noreferrer"
-				class="flex flex-row items-center gap-1 p-1 font-semibold text-cyan-400/90 hover:text-cyan-400 sm:text-base"
+				class="btn btn-link text-info hover:text-info-content gap-2 no-underline"
 			>
-				<SimpleIconsTelegram class="size-5 " />
+				<SimpleIconsTelegram class="h-5 w-5" />
 				NewsMix
 			</a>
-		</div>
+		</header>
 
 		<!-- Search Form -->
-		<form
-			method="POST"
-			action="?/search"
-			use:enhance={handleSubmit}
-			class="border-t border-b border-white/10 sm:rounded-2xl sm:border-none sm:p-6"
-		>
-			<div class="grid gap-4 sm:grid-cols-2">
-				<div class="group">
-					<label class="mb-2 block text-sm font-medium text-white/90 drop-shadow">
-						Channel Name
-						<input
-							type="text"
-							name="name"
-							placeholder="Search channels..."
-							class="search-input w-full rounded-xl px-3 py-2.5 text-white placeholder-white/70 sm:px-4 sm:py-3"
-							bind:value={searchTerm}
-							oninput={() => {
-								// Auto-submit on input change with debounce
-								clearTimeout(searchTimeout);
-								searchTimeout = setTimeout(() => {
-									if (typeof document !== 'undefined') {
-										document.querySelector('form')?.requestSubmit();
-									}
-								}, 300);
-							}}
-						/>
-					</label>
-				</div>
+		<div class="card bg-base-100/10 mb-8 border border-white/20 shadow-2xl backdrop-blur-sm">
+			<div class="card-body">
+				<form method="POST" action="?/search" use:enhance={handleFormSubmit}>
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+						<!-- Channel Name Input -->
+						<div class="form-control">
+							<label class="label" for="channel-name">
+								<span class="label-text font-medium text-white">Channel Name</span>
+							</label>
+							<input
+								id="channel-name"
+								type="text"
+								name="name"
+								placeholder="Search channels..."
+								class="input input-bordered border-white/30 bg-white/20 text-white placeholder-white/70 focus:border-white focus:bg-white/30"
+								bind:value={searchTerm}
+								oninput={debounceSearch}
+							/>
+						</div>
 
-				<div class="group">
-					<label class="mb-2 block text-sm font-medium text-white/90 drop-shadow">
-						Region
-						<select
-							name="bias"
-							class="search-input w-full rounded-xl px-3 py-2.5 text-white sm:px-4 sm:py-3"
-							bind:value={selectedBias}
-							onchange={() => {
-								if (typeof document !== 'undefined') {
-									document.querySelector('form')?.requestSubmit();
-								}
-							}}
-						>
-							<option value="" class="bg-purple-800/90">All Regions</option>
-							{#each biasOptions as option}
-								<option value={option.value} class="bg-purple-800/90">
-									{option.value}
-									{option.label}
-								</option>
-							{/each}
-						</select>
-					</label>
-				</div>
+						<!-- Region Select -->
+						<div class="form-control">
+							<label class="label" for="region-select">
+								<span class="label-text font-medium text-white">Region</span>
+							</label>
+							<select
+								id="region-select"
+								name="bias"
+								class="select select-bordered border-white/30 bg-white/20 text-white focus:border-white focus:bg-white/30"
+								bind:value={selectedBias}
+								onchange={() => document.querySelector('form')?.requestSubmit()}
+							>
+								<option value="" class="bg-base-300 text-base-content">All Regions</option>
+								{#each BIAS_OPTIONS as option}
+									<option value={option.value} class="bg-base-300 text-base-content">
+										{option.value}
+										{option.label}
+									</option>
+								{/each}
+							</select>
+						</div>
+					</div>
+
+					<!-- Hidden submit button for accessibility -->
+					<button type="submit" class="sr-only" aria-label="Submit search">Search</button>
+				</form>
 			</div>
-
-			<!-- Hidden submit button for accessibility -->
-			<button type="submit" class="sr-only">Search</button>
-		</form>
+		</div>
 
 		<!-- Loading State -->
 		{#if loading}
-			<div class="flex justify-center py-12">
-				<div class="loading-pulse text-white">
-					<div
-						class="h-8 w-8 animate-spin rounded-full border-4 border-white/20 border-t-white"
-					></div>
-				</div>
+			<div class="flex justify-center py-16">
+				<div class="loading loading-spinner loading-lg text-white"></div>
 			</div>
 		{/if}
 
 		<!-- Search Results -->
-		<div class="space-y-4">
-			{#each searchResults as channel (channel.channel_id)}
-				<a
-					class=" fade-in w-full rounded-xl p-4 text-left sm:rounded-2xl sm:p-6"
-					style="view-transition-name: channel-{channel.channel_id}"
-					href={`/channel/${channel.channel_id}`}
-				>
-					<div class="flex items-center gap-3 sm:gap-6">
-						<div class="flex-shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
-							<div
-								class="h-12 w-12 overflow-hidden rounded-full ring-2 ring-white/40 sm:h-16 sm:w-16"
-							>
-								<img
-									src={channel.avatar}
-									alt={channel.channel_name}
-									class="h-full w-full object-cover"
-								/>
+		{#if !loading}
+			<div class="space-y-4">
+				{#each searchResults as channel (channel.channel_id)}
+					<a
+						href={`/channel/${channel.channel_id}`}
+						class="card bg-base-100/10 hover:bg-base-100/20 group border border-white/20 backdrop-blur-sm transition-all duration-200 hover:border-white/40"
+						style="view-transition-name: channel-{channel.channel_id}"
+					>
+						<div class="card-body">
+							<div class="flex items-center gap-4">
+								<!-- Avatar -->
+								<div
+									class="flex-shrink-0"
+									style="view-transition-name: avatar-{channel.channel_id}"
+								>
+									<div class="avatar">
+										<div
+											class="ring-offset-base-100 h-16 w-16 rounded-full ring ring-white/40 ring-offset-2"
+										>
+											<img src={channel.avatar} alt={channel.channel_name} class="object-cover" />
+										</div>
+									</div>
+								</div>
+
+								<!-- Channel Info -->
+								<div class="min-w-0 flex-grow">
+									<h3 class="card-title mb-1 truncate text-xl text-white">
+										{channel.channel_name}
+									</h3>
+									{#if channel.username}
+										<p class="text-sm text-white/80">@{channel.username}</p>
+									{/if}
+								</div>
+
+								<!-- Region Badge and Arrow -->
+								<div class="flex flex-shrink-0 items-center gap-4">
+									<div class="badge badge-lg border-white/40 bg-white/20 p-4 text-2xl text-white">
+										{channel.bias}
+									</div>
+									<FluentArrowRight24Regular
+										class="h-6 w-6 text-white/70 transition-all duration-200 group-hover:translate-x-1 group-hover:text-white"
+									/>
+								</div>
 							</div>
 						</div>
+					</a>
+				{/each}
 
-						<div class="min-w-0 flex-1">
-							<h3 class="mb-1 text-lg font-semibold text-white drop-shadow sm:text-xl">
-								{channel.channel_name}
-							</h3>
-							{#if channel.username}
-								<p class="text-xs text-white/80 drop-shadow sm:text-sm">
-									@{channel.username}
-								</p>
-							{/if}
-						</div>
-
-						<div class="flex items-center gap-2 sm:gap-4">
-							<span class="text-xl sm:text-2xl">
-								{channel.bias}
-							</span>
-							<FluentArrowRight24Regular
-								class="h-5 w-5 text-white/70 transition-transform group-hover:translate-x-1 sm:h-6 sm:w-6"
-							/>
+				<!-- Empty State -->
+				{#if showEmptyState}
+					<div class="card bg-base-100/10 border border-white/20 backdrop-blur-sm">
+						<div class="card-body py-16 text-center">
+							<div
+								class="bg-base-300/50 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full"
+							>
+								<svg
+									class="h-8 w-8 text-white/50"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+								>
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+									/>
+								</svg>
+							</div>
+							<h3 class="mb-2 text-xl font-semibold text-white">No channels found</h3>
+							<p class="text-white/70">Try adjusting your search criteria</p>
 						</div>
 					</div>
-				</a>
-			{/each}
-
-			{#if !loading && searchResults.length === 0 && (searchTerm || selectedBias)}
-				<div class="py-16 text-center">
-					<div
-						class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-800"
-					>
-						<svg
-							class="h-8 w-8 text-slate-500"
-							fill="none"
-							stroke="currentColor"
-							viewBox="0 0 24 24"
-						>
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								stroke-width="2"
-								d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-							/>
-						</svg>
-					</div>
-					<p class="mb-2 text-lg text-slate-300">No channels found</p>
-					<p class="text-slate-500">Try adjusting your search criteria</p>
-				</div>
-			{/if}
-		</div>
+				{/if}
+			</div>
+		{/if}
 	</div>
 </div>
+
+<style>
+	/* Custom styles for better gradient integration */
+	.input:focus,
+	.select:focus {
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+	}
+</style>
