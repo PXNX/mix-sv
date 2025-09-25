@@ -93,7 +93,7 @@
 			rel="noopener noreferrer"
 			class="btn btn-lg w-full border-none bg-gradient-to-r from-pink-500 to-purple-600 text-white transition-all duration-300 hover:scale-105 hover:from-pink-600 hover:to-purple-700"
 		>
-			<SimpleIconsTelegram class="h-6 w-6" />
+			<SimpleIconsTelegram class="size-6" />
 			Open in Telegram
 		</a>
 	{:else if channel.invite}
@@ -103,12 +103,12 @@
 			rel="noopener noreferrer"
 			class="btn btn-lg w-full border-none bg-gradient-to-r from-blue-500 to-teal-600 text-white transition-all duration-300 hover:scale-105 hover:from-blue-600 hover:to-teal-700"
 		>
-			<SimpleIconsTelegram class="h-6 w-6" />
+			<SimpleIconsTelegram class="size-6" />
 			Join Channel
 		</a>
 	{:else}
 		<div class="btn btn-lg btn-disabled w-full border-white/20 bg-white/10 text-white/50">
-			<SimpleIconsTelegram class="h-6 w-6" />
+			<SimpleIconsTelegram class="size-6" />
 			Channel Not Available
 		</div>
 	{/if}
