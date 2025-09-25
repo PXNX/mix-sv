@@ -12,7 +12,6 @@
 		form: ActionData;
 	}
 
-	const SEARCH_DEBOUNCE_MS = 300;
 	const BIAS_OPTIONS = [
 		{ value: '🇺🇦', label: 'Ukraine' },
 		{ value: '🇷🇺', label: 'Russia' },
@@ -23,7 +22,6 @@
 
 	let { data, form }: Props = $props();
 
-	let searchTimeout = 0;
 	let searchTerm = $state($page.url.searchParams.get('name') || '');
 	let selectedBias = $state($page.url.searchParams.get('bias') || '');
 	let searchResults: Channel[] = $state(data.channels || []);
@@ -49,13 +47,6 @@
 			await update({ reset: false });
 			loading = false;
 		};
-	}
-
-	function debounceSearch() {
-		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(() => {
-			document.querySelector('form')?.requestSubmit();
-		}, SEARCH_DEBOUNCE_MS);
 	}
 
 	const showEmptyState = $derived(
@@ -95,10 +86,6 @@
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 				<!-- Channel Name Input -->
 				<div class="form-control">
-					<label class="label" for="channel-name">
-						<span class="label-text flex items-center gap-2 text-lg font-semibold text-white">
-						</span>
-					</label>
 					<input
 						id="channel-name"
 						type="text"
@@ -106,23 +93,17 @@
 						placeholder="Search channels..."
 						class="input input-lg border-white/40 bg-white/20 text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200 focus:border-white focus:bg-white/30"
 						bind:value={searchTerm}
-						oninput={debounceSearch}
 						disabled={loading}
 					/>
 				</div>
 
 				<!-- Region Select -->
 				<div class="form-control">
-					<label class="label" for="region-select">
-						<span class="label-text flex items-center gap-2 text-lg font-semibold text-white">
-						</span>
-					</label>
 					<select
 						id="region-select"
 						name="bias"
 						class="select select-lg border-white/40 bg-white/20 text-white backdrop-blur-sm transition-all duration-200 focus:border-white focus:bg-white/30"
 						bind:value={selectedBias}
-						onchange={() => document.querySelector('form')?.requestSubmit()}
 						disabled={loading}
 					>
 						<option value="" class="bg-base-300 text-base-content">🌐 Ignore Bias</option>
@@ -136,8 +117,17 @@
 				</div>
 			</div>
 
-			<!-- Hidden submit button for accessibility -->
-			<button type="submit" class="sr-only" aria-label="Submit search">Search</button>
+			<!-- Visible submit button -->
+			<div class="mt-6 flex justify-end">
+				<button
+					type="submit"
+					class="btn btn-primary flex items-center gap-2 rounded-xl border border-white/40 bg-white/20 px-6 py-3 text-white backdrop-blur-sm transition-all duration-300 hover:border-white/60 hover:bg-white/30"
+					disabled={loading}
+				>
+					<span>Search</span>
+					<FluentArrowRight24Regular class="h-5 w-5" />
+				</button>
+			</div>
 		</form>
 	</div>
 </div>
