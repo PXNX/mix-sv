@@ -69,9 +69,9 @@
 
 				{#if channel.bias}
 					<div
-						class="inline-block rounded-2xl border border-white/40 bg-white/20 px-6 py-3 backdrop-blur-sm"
+						class="inline-block rounded-2xl border border-white/40 bg-white/20 px-6 py-3 text-3xl tracking-wide backdrop-blur-sm"
 					>
-						<span class="text-3xl">{channel.bias}</span>
+						{channel.bias}
 					</div>
 				{/if}
 			</div>

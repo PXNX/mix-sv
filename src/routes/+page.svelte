@@ -199,12 +199,12 @@
 						</div>
 
 						<!-- Region Badge and Arrow -->
-						<div class="flex flex-shrink-0 items-center gap-6">
+						<div class="flex flex-shrink-0 items-center gap-6 tracking-wide">
 							{#if channel.bias}
 								<div
-									class="rounded-lg border border-white/40 bg-white/20 px-2 py-1 backdrop-blur-sm transition-all duration-300 group-hover:border-white/60 group-hover:bg-white/30"
+									class="rounded-lg border border-white/40 bg-white/20 px-2 py-1 text-xl tracking-wide backdrop-blur-sm transition-all duration-300 group-hover:border-white/60 group-hover:bg-white/30"
 								>
-									<span class="text-xl">{channel.bias}</span>
+									{channel.bias}
 								</div>
 							{/if}
 
