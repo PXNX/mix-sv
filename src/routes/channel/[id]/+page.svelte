@@ -19,85 +19,58 @@
 	<meta name="description" content="Details for {channel.name} Telegram channel" />
 </svelte:head>
 
-<div class="space-y-6">
-	<button class="btn btn-ghost" onclick={goBackToSearch}>
-		<svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-			<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"
-			></path>
-		</svg>
-		Back to Search
-	</button>
+<div class="bg-base-100 min-h-screen p-6">
+	<div class="mx-auto max-w-2xl space-y-8">
+		<!-- Back Button -->
+		<button class="btn btn-ghost hover:btn-neutral transition-colors" onclick={goBackToSearch}>
+			<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"
+				></path>
+			</svg>
+			Back
+		</button>
 
-	<div
-		class="card bg-base-100 channel-card shadow-xl"
-		style="view-transition-name: channel-{channel.id}"
-	>
-		<div class="card-body">
-			<div class="mb-6 flex items-center space-x-6">
-				<div class="avatar channel-avatar" style="view-transition-name: avatar-{channel.id}">
-					<div class="w-24 rounded-full">
+		<!-- Main Card -->
+		<div class="bg-base-200/50 space-y-8 rounded-3xl p-8">
+			<!-- Header -->
+			<div class="flex items-center gap-6">
+				<div class="avatar">
+					<div class="w-20 rounded-2xl">
 						<img src={channel.avatar} alt={channel.name} />
 					</div>
 				</div>
 				<div class="flex-1">
-					<h2 class="text-3xl font-bold">{channel.name}</h2>
-					<p class="text-base-content/70 text-xl">{channel.username}</p>
-					<div class="mt-2 text-3xl">{channel.bias}</div>
+					<h1 class="text-base-content text-2xl font-bold">{channel.name}</h1>
+					<p class="text-base-content/60">@{channel.username}</p>
 				</div>
 			</div>
 
-			<div class="divider"></div>
-
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-				<div class="space-y-4">
-					<div>
-						<h3 class="mb-2 text-lg font-semibold">Channel ID</h3>
-						<div class="bg-base-200 rounded-lg p-3 font-mono">
-							{channel.id}
-						</div>
-					</div>
-
-					<div>
-						<h3 class="mb-2 text-lg font-semibold">Username</h3>
-						<div class="bg-base-200 rounded-lg p-3">
-							{channel.username}
-						</div>
-					</div>
+			<!-- Details -->
+			<div class="grid gap-4">
+				<div class="border-base-300/30 flex items-center justify-between border-b py-3">
+					<span class="text-base-content/70">Channel ID</span>
+					<code class="bg-base-300/50 rounded px-2 py-1 text-sm">{channel.id}</code>
 				</div>
 
-				<div class="space-y-4">
-					<div>
-						<h3 class="mb-2 text-lg font-semibold">Bias/Region</h3>
-						<div class="bg-base-200 rounded-lg p-3 text-center">
-							<span class="text-2xl">{channel.bias}</span>
-						</div>
-					</div>
+				<div class="border-base-300/30 flex items-center justify-between border-b py-3">
+					<span class="text-base-content/70">Username</span>
+					<span class="font-medium">@{channel.username}</span>
+				</div>
 
-					{#if channel.inviteLink}
-						<div>
-							<h3 class="mb-2 text-lg font-semibold">Invite Link</h3>
-							<a href={channel.inviteLink} target="_blank" class="btn btn-primary w-full">
-								Join Channel
-								<svg class="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path
-										stroke-linecap="round"
-										stroke-linejoin="round"
-										stroke-width="2"
-										d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-									></path>
-								</svg>
-							</a>
-						</div>
-					{:else}
-						<div>
-							<h3 class="mb-2 text-lg font-semibold">Invite Link</h3>
-							<div class="bg-base-200 text-base-content/50 rounded-lg p-3 text-center">
-								Not Available
-							</div>
-						</div>
-					{/if}
+				<div class="flex items-center justify-between py-3">
+					<span class="text-base-content/70">Region</span>
+					<span class="text-2xl">{channel.bias}</span>
 				</div>
 			</div>
+
+			<!-- Join Button - Only show if no username available -->
+			{#if !channel.username && channel.inviteLink}
+				<a href={channel.inviteLink} target="_blank" class="btn btn-primary w-full rounded-2xl">
+					Join Channel
+				</a>
+			{:else if !channel.username}
+				<div class="btn btn-disabled w-full rounded-2xl">Invite Not Available</div>
+			{/if}
 		</div>
 	</div>
 </div>
