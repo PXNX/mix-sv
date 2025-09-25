@@ -27,14 +27,12 @@
 	let searchResults: Channel[] = $state(data.channels || []);
 	let loading = $state(false);
 
-	// Update results when form data changes
 	$effect(() => {
 		if (form?.channels) {
 			searchResults = form.channels;
 		}
 	});
 
-	// Update results when page data changes (on navigation)
 	$effect(() => {
 		if (data?.channels) {
 			searchResults = data.channels;
@@ -61,18 +59,14 @@
 </svelte:head>
 
 <!-- Header -->
-<header class="mb-12 text-center">
-	<h1
-		class="mb-4 bg-gradient-to-r from-white via-pink-100 to-blue-100 bg-clip-text text-2xl font-bold text-white md:text-3xl"
-	>
-		Telegram Channel Search
-	</h1>
+<header class="mb-10 text-center">
+	<h1 class="mb-4 text-2xl font-bold text-white">Telegram Channel Search</h1>
 
 	<a
 		href="https://t.me/nyx_news"
 		target="_blank"
 		rel="noopener noreferrer"
-		class="group inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/20 px-6 py-3 text-white backdrop-blur-sm transition-all duration-300 hover:border-white/50 hover:bg-white/30"
+		class="group inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/20 px-5 py-2 text-white backdrop-blur-sm transition-all duration-300 hover:border-white/50 hover:bg-white/30"
 	>
 		<SimpleIconsTelegram class="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
 		<span class="font-semibold">NewsMix</span>
@@ -80,52 +74,51 @@
 </header>
 
 <!-- Search Form -->
-<div class="card mb-8 border border-white/30 bg-white/10 backdrop-blur-md">
-	<div class="card-body p-6">
-		<form method="POST" action="?/search" use:enhance={handleFormSubmit}>
-			<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
-				<!-- Channel Name Input -->
-				<div class="form-control">
-					<input
-						id="channel-name"
-						type="text"
-						name="name"
-						placeholder="Search channels..."
-						class="input input-lg border-white/40 bg-white/20 text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200 focus:border-white focus:bg-white/30"
-						bind:value={searchTerm}
-						disabled={loading}
-					/>
-				</div>
+<div class="card mb-6 border border-white/30 bg-white/10 backdrop-blur-md">
+	<div class="card-body p-4 md:p-6">
+		<form
+			method="POST"
+			action="?/search"
+			use:enhance={handleFormSubmit}
+			class="space-y-4 md:space-y-6"
+		>
+			<!-- Channel Name Input -->
+			<input
+				id="channel-name"
+				type="text"
+				name="name"
+				placeholder="Search channels..."
+				class="input w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-white placeholder-white/60 backdrop-blur-sm transition-all duration-200 focus:border-pink-200 focus:bg-white/30"
+				bind:value={searchTerm}
+				disabled={loading}
+			/>
 
-				<!-- Region Select -->
-				<div class="form-control">
-					<select
-						id="region-select"
-						name="bias"
-						class="select select-lg border-white/40 bg-white/20 text-white backdrop-blur-sm transition-all duration-200 focus:border-white focus:bg-white/30"
-						bind:value={selectedBias}
-						disabled={loading}
-					>
-						<option value="" class="bg-base-300 text-base-content">🌐 Ignore Bias</option>
-						{#each BIAS_OPTIONS as option}
-							<option value={option.value} class="bg-base-300 text-base-content">
-								{option.value}
-								{option.label}
-							</option>
-						{/each}
-					</select>
-				</div>
-			</div>
+			<!-- bias Select -->
+			<select
+				id="bias-select"
+				name="bias"
+				class="select w-full rounded-xl border border-white/40 bg-white/10 px-4 py-3 text-white backdrop-blur-sm transition-all duration-200 focus:border-pink-200 focus:bg-white/30"
+				bind:value={selectedBias}
+				disabled={loading}
+			>
+				<option value="" class=" bg-white/10 text-white">🌐 Ignore Bias</option>
+				{#each BIAS_OPTIONS as option}
+					<option value={option.value} class=" bg-white/10 text-white">
+						{option.value}
+						{option.label}
+					</option>
+				{/each}
+			</select>
 
-			<!-- Visible submit button -->
-			<div class="mt-6 flex justify-end">
+			<!-- Submit button -->
+			<div class="flex">
 				<button
 					type="submit"
-					class="btn btn-primary flex items-center gap-2 rounded-xl border border-white/40 bg-white/20 px-6 py-3 text-white backdrop-blur-sm transition-all duration-300 hover:border-white/60 hover:bg-white/30"
+					class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:from-pink-300 hover:to-blue-300 md:ml-auto md:w-auto"
 					disabled={loading}
 				>
-					<span>Search</span>
-					<FluentArrowRight24Regular class="h-5 w-5" />
+					<span class="text-lg">Search</span>
+					<FluentArrowRight24Regular class="h-6 w-6" />
 				</button>
 			</div>
 		</form>
