@@ -1,8 +1,8 @@
 export interface Channel {
-	id: number;
-	name: string;
+	channel_id: number;
+	channel_name: string;
 	username: string;
 	bias: string;
-	avatar: string;
-	inviteLink?: string;
+	avatar?: string;
+	invite?: string;
 }

@@ -8,10 +8,6 @@
 
 	let { data }: Props = $props();
 	const { channel } = data;
-
-	function goBackToSearch() {
-		goto('/');
-	}
 </script>
 
 <svelte:head>
@@ -22,13 +18,6 @@
 <div class="bg-base-100 min-h-screen p-6">
 	<div class="mx-auto max-w-2xl space-y-8">
 		<!-- Back Button -->
-		<button class="btn btn-ghost hover:btn-neutral transition-colors" onclick={goBackToSearch}>
-			<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"
-				></path>
-			</svg>
-			Back
-		</button>
 
 		<!-- Main Card -->
 		<div class="bg-base-200/50 space-y-8 rounded-3xl p-8">
