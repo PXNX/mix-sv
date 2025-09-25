@@ -4,7 +4,7 @@
 	let { children } = $props();
 </script>
 
-<div class="100dvw 100dvh relative flex flex-row" style="font-family:'HP Simplified'">
+<div class="100dvw 100dvh" style="font-family:'HP Simplified'">
 	{@render children()}
 </div>
 
