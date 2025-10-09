@@ -26,7 +26,6 @@
  * ```
  */
 declare module '$env/static/private' {
-	export const DATABASE_URL: string;
 	export const ALLUSERSPROFILE: string;
 	export const APPDATA: string;
 	export const BUN_INSPECT_CONNECT_TO: string;
@@ -47,7 +46,6 @@ declare module '$env/static/private' {
 	export const LOCALAPPDATA: string;
 	export const LOGONSERVER: string;
 	export const NODE: string;
-	export const NODE_ENV: string;
 	export const npm_command: string;
 	export const npm_config_local_prefix: string;
 	export const npm_config_user_agent: string;
@@ -99,6 +97,8 @@ declare module '$env/static/private' {
 	export const VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 	export const windir: string;
 	export const __PSLockDownPolicy: string;
+	export const DATABASE_URL: string;
+	export const NODE_ENV: string;
 }
 
 /**
@@ -128,7 +128,6 @@ declare module '$env/static/public' {
  */
 declare module '$env/dynamic/private' {
 	export const env: {
-		DATABASE_URL: string;
 		ALLUSERSPROFILE: string;
 		APPDATA: string;
 		BUN_INSPECT_CONNECT_TO: string;
@@ -149,7 +148,6 @@ declare module '$env/dynamic/private' {
 		LOCALAPPDATA: string;
 		LOGONSERVER: string;
 		NODE: string;
-		NODE_ENV: string;
 		npm_command: string;
 		npm_config_local_prefix: string;
 		npm_config_user_agent: string;
@@ -201,6 +199,8 @@ declare module '$env/dynamic/private' {
 		VSCODE_PYTHON_AUTOACTIVATE_GUARD: string;
 		windir: string;
 		__PSLockDownPolicy: string;
+		DATABASE_URL: string;
+		NODE_ENV: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}

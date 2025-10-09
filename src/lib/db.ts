@@ -1,16 +1,5 @@
-import postgres from 'postgres';
+import { sql } from 'bun';
 import type { Channel } from '$lib/types';
-
-import { DATABASE_URL } from '$env/static/private';
-
-const sql = postgres(DATABASE_URL, {
-	// Optional configuration
-	// max: 20,        // Maximum number of connections
-	// idle_timeout: 20,
-	// connect_timeout: 10,
-});
-
-export default sql;
 
 export async function searchChannels(channel_name?: string, bias?: string): Promise<Channel[]> {
 	try {
