@@ -68,7 +68,7 @@
 		rel="noopener noreferrer"
 		class="group inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/20 px-5 py-2 text-white backdrop-blur-sm transition-all duration-300 hover:border-white/50 hover:bg-white/30"
 	>
-		<SimpleIconsTelegram class="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
+		<SimpleIconsTelegram class="size-5 transition-transform duration-200 group-hover:scale-110" />
 		<span class="font-semibold">NewsMix</span>
 	</a>
 </header>
@@ -114,7 +114,7 @@
 			<div class="flex">
 				<button
 					type="submit"
-					class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-pink-400 via-purple-400 to-blue-400 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:from-pink-300 hover:to-blue-300 md:ml-auto md:w-auto"
+					class="flex w-full items-center justify-center gap-2 rounded-xl bg-linear-to-r from-pink-400 via-purple-400 to-blue-400 px-6 py-3 font-semibold text-white shadow-lg transition-all duration-300 hover:scale-[1.02] hover:from-pink-300 hover:to-blue-300 md:ml-auto md:w-auto"
 					disabled={loading}
 				>
 					<span class="text-lg">Search</span>
@@ -150,7 +150,7 @@
 				<div class="card-body p-4">
 					<div class="flex items-center gap-6">
 						<!-- Avatar -->
-						<div class="flex-shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
+						<div class="shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
 							<div class="avatar">
 								<div
 									class="size-20 rounded-full ring-4 ring-white/40 ring-offset-4 ring-offset-transparent transition-all duration-300 group-hover:ring-white/60"
@@ -166,7 +166,7 @@
 						</div>
 
 						<!-- Channel Info -->
-						<div class=" flex-grow gap-1">
+						<div class=" grow gap-1">
 							<h3
 								class="ellipsis truncate text-lg font-bold text-white transition-colors duration-200 group-hover:text-pink-100"
 							>
@@ -182,7 +182,7 @@
 						</div>
 
 						<!-- Region Badge and Arrow -->
-						<div class="flex flex-shrink-0 items-center gap-6 tracking-wide">
+						<div class="flex shrink-0 items-center gap-6 tracking-wide">
 							{#if channel.bias}
 								<div
 									class="rounded-lg border border-white/40 bg-white/20 px-2 py-1 text-xl tracking-wide backdrop-blur-sm transition-all duration-300 group-hover:border-white/60 group-hover:bg-white/30"
@@ -208,7 +208,7 @@
 						class="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-white/10 backdrop-blur-sm"
 					>
 						<svg
-							class="h-12 w-12 text-white/60"
+							class="size-12 text-white/60"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"

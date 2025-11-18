@@ -1,9 +1,0 @@
-{
-	"/": [
-		"src/routes/+page.server.ts"
-	],
-	"/channel/[id]": [
-		"src/routes/channel/[id]/+page.server.ts"
-	],
-	"/privacy-policy": []
-}
