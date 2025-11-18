@@ -1,5 +1,4 @@
 @import 'tailwindcss';
-@import 'tailwindcss';
 @plugin 'daisyui' {
 	themes: dark --default;
 }
@@ -18,7 +17,6 @@
 		font-display: swap;
 	}
 }
-
 
 /* View Transitions */
 @view-transition {

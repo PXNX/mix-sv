@@ -1,15 +1,50 @@
+// src/routes/+page.server.ts
 import type { PageServerLoad, Actions } from './$types';
-import { searchChannels } from '$lib/db';
+import { db } from '$lib/server/db';
+import { sources } from '$lib/server/schema';
+import { ilike, eq, and } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ url }) => {
 	const name = url.searchParams.get('name') || undefined;
 	const bias = url.searchParams.get('bias') || undefined;
 
-	const channels = await searchChannels(name, bias);
+	try {
+		const conditions: SQL[] = [];
 
-	return {
-		channels
-	};
+		if (name) {
+			conditions.push(ilike(sources.channel_name, `%${name}%`));
+		}
+
+		if (bias) {
+			conditions.push(eq(sources.bias, bias));
+		}
+
+		let query = db
+			.select({
+				channel_id: sources.channel_id,
+				channel_name: sources.channel_name,
+				username: sources.username,
+				bias: sources.bias,
+				invite: sources.invite
+			})
+			.from(sources);
+
+		if (conditions.length > 0) {
+			query = query.where(and(...conditions));
+		}
+
+		const channels = await query.orderBy(sources.channel_name);
+
+		return {
+			channels
+		};
+	} catch (error) {
+		console.error('Error loading channels:', error);
+		return {
+			channels: []
+		};
+	}
 };
 
 export const actions: Actions = {
@@ -19,7 +54,32 @@ export const actions: Actions = {
 		const bias = data.get('bias')?.toString() || undefined;
 
 		try {
-			const channels = await searchChannels(name, bias);
+			const conditions: SQL[] = [];
+
+			if (name) {
+				conditions.push(ilike(sources.channel_name, `%${name}%`));
+			}
+
+			if (bias) {
+				conditions.push(eq(sources.bias, bias));
+			}
+
+			let query = db
+				.select({
+					channel_id: sources.channel_id,
+					channel_name: sources.channel_name,
+					username: sources.username,
+					bias: sources.bias,
+					invite: sources.invite
+				})
+				.from(sources);
+
+			if (conditions.length > 0) {
+				query = query.where(and(...conditions));
+			}
+
+			const channels = await query.orderBy(sources.channel_name);
+
 			return {
 				success: true,
 				channels
