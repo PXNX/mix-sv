@@ -44,7 +44,7 @@
 	<div class="card-body p-8">
 		<div class="flex flex-col items-center gap-6 text-center">
 			<!-- Avatar -->
-			<div class="flex-shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
+			<div class="shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
 				<div class="avatar">
 					<div
 						class="h-32 w-32 rounded-3xl ring-4 ring-white/40 ring-offset-4 ring-offset-transparent"
@@ -57,7 +57,7 @@
 			<!-- Channel Info -->
 			<div class="space-y-4">
 				<h1
-					class="bg-gradient-to-r from-white via-pink-100 to-blue-100 bg-clip-text text-4xl font-bold text-white"
+					class="bg-linear-to-r from-white via-pink-100 to-blue-100 bg-clip-text text-4xl font-bold text-white"
 				>
 					{channel.channel_name}
 				</h1>
@@ -80,7 +80,7 @@
 
 	<!-- Gradient overlay -->
 	<div
-		class="pointer-events-none absolute inset-0 bg-gradient-to-r from-pink-500/10 to-blue-500/10 opacity-50"
+		class="pointer-events-none absolute inset-0 bg-linear-to-r from-pink-500/10 to-blue-500/10 opacity-50"
 	></div>
 </div>
 
@@ -91,7 +91,7 @@
 			href={`https://t.me/${channel.username}`}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="btn btn-lg w-full border-none bg-gradient-to-r from-pink-500 to-purple-600 text-white transition-all duration-300 hover:scale-105 hover:from-pink-600 hover:to-purple-700"
+			class="btn btn-lg w-full border-none bg-linear-to-r from-pink-500 to-purple-600 text-white transition-all duration-300 hover:scale-105 hover:from-pink-600 hover:to-purple-700"
 		>
 			<SimpleIconsTelegram class="size-6" />
 			Open in Telegram
@@ -101,7 +101,7 @@
 			href={`https://t.me/+${channel.invite}`}
 			target="_blank"
 			rel="noopener noreferrer"
-			class="btn btn-lg w-full border-none bg-gradient-to-r from-blue-500 to-teal-600 text-white transition-all duration-300 hover:scale-105 hover:from-blue-600 hover:to-teal-700"
+			class="btn btn-lg w-full border-none bg-linear-to-r from-blue-500 to-teal-600 text-white transition-all duration-300 hover:scale-105 hover:from-blue-600 hover:to-teal-700"
 		>
 			<SimpleIconsTelegram class="size-6" />
 			Join Channel
