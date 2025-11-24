@@ -1,5 +1,5 @@
 <svelte:head>
-	<title>MN Map | Privacy Policy</title>
+	<title>NM Search | Privacy Policy</title>
 </svelte:head>
 
 <div class="prose lg:prose-xl bg-base-100 mx-auto rounded-2xl p-6 shadow-md">
@@ -11,9 +11,9 @@
 
 	<h2 class="mt-6 text-2xl font-semibold">1. Introduction</h2>
 	<p>
-		We at <strong>Militaernews</strong> (“we”, “us”, or “our”) are committed to protecting your
-		privacy. This Privacy Policy explains how we collect, use, and safeguard your personal data when
-		you visit our website
+		We at <strong>NewsMix</strong> (“we”, “us”, or “our”) are committed to protecting your privacy.
+		This Privacy Policy explains how we collect, use, and safeguard your personal data when you
+		visit our website
 		<a class="link link-primary" href="https://geo-mn.vercel.app/">https://geo-mn.vercel.app/</a> (the
 		“Site”), in accordance with the General Data Protection Regulation (EU) 2016/679 (“GDPR”).
 	</p>
