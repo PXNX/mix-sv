@@ -20,7 +20,8 @@ export const load = async ({ params }: Parameters<PageServerLoad>[0]) => {
 				channel_name: sources.channel_name,
 				username: sources.username,
 				bias: sources.bias,
-				invite: sources.invite
+				invite: sources.invite,
+				avatar: sources.avatar
 			})
 			.from(sources)
 			.where(eq(sources.channel_id, id))

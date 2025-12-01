@@ -25,13 +25,22 @@
 		"src/routes/(public)/auth/logout/+server.ts"
 	],
 	"/(authorized)/channel/new": [
+		"src/routes/(authorized)/channel/new/+page.server.ts",
 		"src/routes/(authorized)/+layout.server.ts"
 	],
 	"/channel/[id]": [
 		"src/routes/channel/[id]/+page.server.ts"
 	],
+	"/(authorized)/channel/[id]/edit": [
+		"src/routes/(authorized)/channel/[id]/edit/+page.server.ts",
+		"src/routes/(authorized)/+layout.server.ts"
+	],
 	"/(public)/contact": [
 		"src/routes/(public)/contact/+page.server.ts",
+		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(public)/favorites": [
+		"src/routes/(public)/favorites/+page.server.ts",
 		"src/routes/(public)/+layout.server.ts"
 	],
 	"/(admin)/pending": [
@@ -40,6 +49,10 @@
 	"/(public)/privacy-policy": [
 		"src/routes/(public)/privacy-policy/+page.server.ts",
 		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(authorized)/submissions": [
+		"src/routes/(authorized)/submissions/+page.server.ts",
+		"src/routes/(authorized)/+layout.server.ts"
 	],
 	"/(public)/terms-of-service": [
 		"src/routes/(public)/terms-of-service/+page.server.ts",
