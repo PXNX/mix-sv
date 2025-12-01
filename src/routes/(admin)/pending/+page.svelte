@@ -22,68 +22,37 @@
 		hasChanged: boolean;
 	}
 
-	function getChanges(edit: any, station: any): DiffField[] {
+	function getChanges(edit: any, source: any): DiffField[] {
 		const fields: DiffField[] = [
 			{
-				label: 'Warm Sleep Available',
-				oldValue: station.hasWarmSleep,
-				newValue: edit.hasWarmSleep,
-				hasChanged: edit.hasWarmSleep !== null && edit.hasWarmSleep !== station.hasWarmSleep
+				label: 'Channel Name',
+				oldValue: source.channel_name,
+				newValue: edit.channelName,
+				hasChanged: edit.channelName !== null && edit.channelName !== source.channel_name
 			},
 			{
-				label: 'Sleep Notes',
-				oldValue: station.sleepNotes,
-				newValue: edit.sleepNotes,
-				hasChanged: edit.sleepNotes !== null && edit.sleepNotes !== station.sleepNotes
+				label: 'Username',
+				oldValue: source.username,
+				newValue: edit.username,
+				hasChanged: edit.username !== null && edit.username !== source.username
 			},
 			{
-				label: 'Outlets Available',
-				oldValue: station.hasOutlets,
-				newValue: edit.hasOutlets,
-				hasChanged: edit.hasOutlets !== null && edit.hasOutlets !== station.hasOutlets
+				label: 'Bias',
+				oldValue: source.bias,
+				newValue: edit.bias,
+				hasChanged: edit.bias !== null && edit.bias !== source.bias
 			},
 			{
-				label: 'Outlet Notes',
-				oldValue: station.outletNotes,
-				newValue: edit.outletNotes,
-				hasChanged: edit.outletNotes !== null && edit.outletNotes !== station.outletNotes
+				label: 'Invite Link',
+				oldValue: source.invite,
+				newValue: edit.invite,
+				hasChanged: edit.invite !== null && edit.invite !== source.invite
 			},
 			{
-				label: 'Toilets Available',
-				oldValue: station.hasToilets,
-				newValue: edit.hasToilets,
-				hasChanged: edit.hasToilets !== null && edit.hasToilets !== station.hasToilets
-			},
-			{
-				label: 'Toilet Notes',
-				oldValue: station.toiletNotes,
-				newValue: edit.toiletNotes,
-				hasChanged: edit.toiletNotes !== null && edit.toiletNotes !== station.toiletNotes
-			},
-			{
-				label: 'Toilets Open at Night',
-				oldValue: station.toiletsOpenAtNight,
-				newValue: edit.toiletsOpenAtNight,
-				hasChanged:
-					edit.toiletsOpenAtNight !== null && edit.toiletsOpenAtNight !== station.toiletsOpenAtNight
-			},
-			{
-				label: 'Open 24 Hours',
-				oldValue: station.isOpen24h,
-				newValue: edit.isOpen24h,
-				hasChanged: edit.isOpen24h !== null && edit.isOpen24h !== station.isOpen24h
-			},
-			{
-				label: 'Opening Hours',
-				oldValue: station.openingHours,
-				newValue: edit.openingHours,
-				hasChanged: edit.openingHours !== null && edit.openingHours !== station.openingHours
-			},
-			{
-				label: 'Additional Info',
-				oldValue: station.additionalInfo,
-				newValue: edit.additionalInfo,
-				hasChanged: edit.additionalInfo !== null && edit.additionalInfo !== station.additionalInfo
+				label: 'Avatar',
+				oldValue: source.avatar,
+				newValue: edit.avatar,
+				hasChanged: edit.avatar !== null && edit.avatar !== source.avatar
 			}
 		];
 
@@ -102,15 +71,15 @@
 		</p>
 	{:else}
 		<div class="space-y-6">
-			{#each data.pendingEdits as { edit, station, user }}
-				{@const changes = getChanges(edit, station)}
+			{#each data.pendingEdits as { edit, source, user }}
+				{@const changes = getChanges(edit, source)}
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 backdrop-blur-sm">
 					<div class="mb-4 flex items-start justify-between">
 						<div>
-							<h3 class="text-xl font-semibold text-white">{station.name}</h3>
+							<h3 class="text-xl font-semibold text-white">{source.channel_name}</h3>
 							<p class="text-sm text-white/60">
 								{#if data.isAdmin}
-									Submitted by {user.name} ({user.email}) on {formatDate(edit.createdAt)}
+									Submitted by {user.email} on {formatDate(edit.createdAt)}
 								{:else}
 									Submitted on {formatDate(edit.createdAt)}
 								{/if}
@@ -123,8 +92,8 @@
 								{changes.length === 1 ? 'change' : 'changes'} proposed
 							</p>
 						</div>
-						<a href="/station/{station.eva}" class="text-blue-400 hover:text-blue-300">
-							View Station
+						<a href="/source/{source.channel_id}" class="text-blue-400 hover:text-blue-300">
+							View Source
 						</a>
 					</div>
 

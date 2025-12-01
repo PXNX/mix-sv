@@ -1,27 +1,18 @@
-<!-- src/routes/channel/new/+page.svelte -->
+<!-- src/routes/channel/[id]/edit/+page.svelte -->
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
-	import * as v from 'valibot';
 	import FluentArrowLeft24Regular from '~icons/fluent/arrow-left-24-regular';
 	import FluentCheckmark24Regular from '~icons/fluent/checkmark-24-regular';
-	import FluentErrorCircle24Regular from '~icons/fluent/error-circle-24-regular';
 	import FluentInfo24Regular from '~icons/fluent/info-24-regular';
-	import type { PageData } from './$types';
+	import { channelSchema } from './schema.js';
 
-	let { data }: { data: PageData } = $props();
 
-	const channelSchema = v.object({
-		channelName: v.pipe(v.string(), v.minLength(1, 'Channel name is required'), v.trim()),
-		username: v.pipe(
-			v.string(),
-			v.minLength(1, 'Username is required'),
-			v.trim(),
-			v.regex(/^@?[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-		),
-		bias: v.pipe(v.string(), v.minLength(1, 'Region is required')),
-		invite: v.optional(v.pipe(v.string(), v.trim()), ''),
-		avatar: v.optional(v.pipe(v.string(), v.url('Invalid URL format'), v.trim()), '')
+
+	let { data } = $props();
+
+	const { form, errors, enhance, submitting } = superForm(data.form, {
+		validators: valibotClient(channelSchema)
 	});
 
 	const BIAS_OPTIONS = [
@@ -32,57 +23,82 @@
 		{ value: '🇨🇦', label: 'Canada', flag: '🇨🇦' }
 	];
 
-	let showSuccess = $state(false);
-	let successMessage = $state('');
+	// Get the original data to compare against
+	const originalData = {
+		channel_name: data.channel.channel_name,
+		username: data.channel.username,
+		bias: data.channel.bias,
+		invite: data.channel.invite || '',
+		avatar: data.channel.avatar || ''
+	};
 
-	const { form, errors, enhance, delayed, message, submitting } = superForm(data.form, {
-		validators: valibotClient(channelSchema),
-		resetForm: true,
-		onUpdated: ({ form }) => {
-			if (form.message) {
-				successMessage = form.message;
-				showSuccess = true;
-				setTimeout(() => {
-					showSuccess = false;
-				}, 5000);
-			}
+	// Get pending edit data if it exists
+	const pendingData = data.pendingEdit
+		? {
+				channel_name: data.pendingEdit.channelName || data.channel.channel_name,
+				username: data.pendingEdit.username || data.channel.username,
+				bias: data.pendingEdit.bias || data.channel.bias,
+				invite: data.pendingEdit.invite || '',
+				avatar: data.pendingEdit.avatar || ''
+		  }
+		: null;
+
+	// Check if current form values differ from both original and pending data
+	const hasChanges = $derived(() => {
+		const current = {
+			channel_name: $form.channel_name?.trim() || '',
+			username: $form.username?.trim() || '',
+			bias: $form.bias || '',
+			invite: $form.invite?.trim() || '',
+			avatar: $form.avatar?.trim() || ''
+		};
+
+		// Check if different from original channel data
+		const differentFromOriginal =
+			current.channel_name !== originalData.channel_name ||
+			current.username !== originalData.username ||
+			current.bias !== originalData.bias ||
+			current.invite !== originalData.invite ||
+			current.avatar !== originalData.avatar;
+
+		// If there's pending data, also check if different from pending
+		if (pendingData) {
+			const differentFromPending =
+				current.channel_name !== pendingData.channel_name ||
+				current.username !== pendingData.username ||
+				current.bias !== pendingData.bias ||
+				current.invite !== pendingData.invite ||
+				current.avatar !== pendingData.avatar;
+
+			return differentFromPending;
 		}
+
+		return differentFromOriginal;
 	});
 </script>
 
 <svelte:head>
-	<title>Add New Channel - Telegram Channel Search</title>
-	<meta name="description" content="Submit a new Telegram channel for review" />
+	<title>Edit Channel - {data.channel.channel_name}</title>
+	<meta name="description" content="Edit channel information" />
 </svelte:head>
 
 <!-- Header -->
 <header class="mb-8">
 	<a
-		href="/"
+		href="/channel/{data.channel.channel_id}"
 		class="group mb-6 inline-flex items-center gap-2 text-white/60 transition-colors hover:text-white"
 	>
 		<FluentArrowLeft24Regular class="size-5" />
-		<span class="text-sm font-medium">Back to Search</span>
+		<span class="text-sm font-medium">Back to Channel</span>
 	</a>
 
-	<h1 class="mb-2 text-3xl font-bold text-white">Add New Channel</h1>
+	<h1 class="mb-2 text-3xl font-bold text-white">Edit Channel</h1>
 	<p class="text-white/60">
 		{data.isAdmin
-			? 'Create a new channel directly'
-			: 'Submit a Telegram channel for admin review and approval'}
+			? 'Update channel information directly'
+			: 'Submit changes for admin review and approval'}
 	</p>
 </header>
-
-<!-- Success Message -->
-{#if showSuccess && successMessage}
-	<div class="alert alert-success mb-6 border-green-500/20 bg-green-500/10 animate-in fade-in slide-in-from-top-2 duration-300">
-		<FluentCheckmark24Regular class="size-6 text-green-400" />
-		<div>
-			<h3 class="font-semibold text-green-400">Success!</h3>
-			<div class="text-sm text-green-300/80">{successMessage}</div>
-		</div>
-	</div>
-{/if}
 
 <!-- Loading Overlay -->
 {#if $submitting}
@@ -91,7 +107,7 @@
 		<div>
 			<h3 class="font-semibold text-blue-400">Processing...</h3>
 			<div class="text-sm text-blue-300/80">
-				{data.isAdmin ? 'Creating channel...' : 'Submitting for review...'}
+				{data.isAdmin ? 'Saving changes...' : 'Submitting for review...'}
 			</div>
 		</div>
 	</div>
@@ -102,15 +118,20 @@
 	<div class="alert mb-6 border-blue-500/20 bg-blue-500/10">
 		<FluentInfo24Regular class="size-6 text-blue-400" />
 		<div class="text-sm text-blue-300/80">
-			<strong class="text-blue-400">Note:</strong> Your submission will be reviewed by an admin
-			before being added to the channel list. Please ensure all information is accurate.
+			{#if data.pendingEdit}
+				<strong class="text-blue-400">You have pending changes:</strong> Editing this form will update
+				your pending changes awaiting admin approval.
+			{:else}
+				<strong class="text-blue-400">Note:</strong> Your changes will be submitted for admin review
+				before being applied to the channel.
+			{/if}
 		</div>
 	</div>
 {/if}
 
 <!-- Form -->
 <div class="rounded-lg border border-white/20 bg-white/5 p-6">
-	<form method="POST" action="?/create" use:enhance class="space-y-6">
+	<form method="POST" use:enhance class="space-y-6">
 		<!-- Channel Name -->
 		<div>
 			<label for="channel-name" class="mb-2 block text-sm font-medium text-white">
@@ -119,15 +140,15 @@
 			<input
 				id="channel-name"
 				type="text"
-				name="channelName"
+				name="channel_name"
 				placeholder="e.g., BBC News"
 				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.channelName}
-				bind:value={$form.channelName}
+				class:border-red-500={$errors.channel_name}
+				bind:value={$form.channel_name}
 				disabled={$submitting}
 			/>
-			{#if $errors.channelName}
-				<p class="mt-1 text-xs text-red-400">{$errors.channelName}</p>
+			{#if $errors.channel_name}
+				<p class="mt-1 text-xs text-red-400">{$errors.channel_name}</p>
 			{/if}
 		</div>
 
@@ -179,7 +200,7 @@
 			{/if}
 		</div>
 
-		<!-- Invite Hash (Optional) -->
+		<!-- Invite Link (Optional) -->
 		<div>
 			<label for="invite" class="mb-2 block text-sm font-medium text-white"> Invite Link </label>
 			<input
@@ -221,22 +242,32 @@
 					Optional: Direct link to the channel's avatar image
 				</p>
 			{/if}
+			{#if $form.avatar}
+				<div class="mt-3">
+					<p class="mb-2 text-xs font-medium text-white/80">Preview:</p>
+					<div class="avatar">
+						<div class="w-16 rounded-full ring ring-white/20 ring-offset-2 ring-offset-gray-900">
+							<img src={$form.avatar} alt="Avatar preview" />
+						</div>
+					</div>
+				</div>
+			{/if}
 		</div>
 
 		<!-- Submit Button -->
 		<div class="flex justify-end pt-4">
-		
+			
 			<button
 				type="submit"
 				class="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
-				disabled={$submitting}
+				disabled={$submitting || !hasChanges()}
 			>
 				{#if $submitting}
 					<span class="loading loading-spinner loading-sm"></span>
-					<span>Submitting...</span>
+					<span>Saving...</span>
 				{:else}
 					<FluentCheckmark24Regular class="size-5" />
-					<span>{data.isAdmin ? 'Create Channel' : 'Submit for Review'}</span>
+					<span>{data.isAdmin ? 'Save Changes' : 'Submit for Review'}</span>
 				{/if}
 			</button>
 		</div>

@@ -2,13 +2,14 @@
 <script lang="ts">
 	import type { Channel } from '$lib/types';
 	import { enhance } from '$app/forms';
+	import { onMount } from 'svelte';
 	import SimpleIconsTelegram from '~icons/simple-icons/telegram';
 	import FluentArrowRight24Regular from '~icons/fluent/arrow-right-24-regular';
 	import FluentSearch24Regular from '~icons/fluent/search-24-regular';
 	import FluentErrorCircle24Regular from '~icons/fluent/error-circle-24-regular';
-	import type { PageData, ActionData } from './$types';
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
-	import { page } from '$app/state';
+	import { favoritesStore } from '$lib/stores/favorites.svelte';
+	import type { PageData, ActionData } from './$types';
 
 	interface Props {
 		data: PageData;
@@ -25,14 +26,27 @@
 
 	let { data, form }: Props = $props();
 
-	let favoritesCount= 1; // fix this
-
-	let searchTerm = $state(page.url.searchParams.get('name') || '');
-	let selectedBias = $state(page.url.searchParams.get('bias') || '');
+	let searchTerm = $state('');
+	let selectedBias = $state('');
 	let searchResults: Channel[] = $state(data.channels || []);
 	let loading = $state(false);
 	let imageLoadedStates = $state<Record<string, boolean>>({});
 	let searchError = $state<string | null>(null);
+	let favoritesCount = $state(0);
+
+	onMount(() => {
+		favoritesStore.initialize();
+		favoritesCount = favoritesStore.count;
+	});
+
+	// Initialize search params from URL on mount
+	$effect(() => {
+		if (typeof window !== 'undefined') {
+			const params = new URLSearchParams(window.location.search);
+			searchTerm = params.get('name') || '';
+			selectedBias = params.get('bias') || '';
+		}
+	});
 
 	$effect(() => {
 		if (form?.channels) {
@@ -50,7 +64,7 @@
 	function handleFormSubmit() {
 		loading = true;
 		searchError = null;
-		return async ({ update }) => {
+		return async ({ update }: { update: (opts?: { reset?: boolean }) => Promise<void> }) => {
 			await update({ reset: false });
 			loading = false;
 		};
@@ -89,30 +103,25 @@
 		<SimpleIconsTelegram class="size-4" />
 		<span class="text-sm font-medium">NewsMix</span>
 	</a>
-
-
 </header>
-
 
 <!-- Auth Navigation -->
 <div class="card mb-6 border border-white/30 bg-white/10 backdrop-blur-md">
 	<div class="card-body flex flex-row-reverse justify-between gap-x-2 p-1 md:p-2">
 		<div class="flex gap-2">
 			{#if data.session && data.user}
-				<a href={resolve("/auth/logout")} class="btn btn-ghost btn-sm"> Logout </a>
-				{:else}
-					<a href="/auth/login" class="btn btn-ghost btn-sm"> Login </a>
+				<a href="/auth/logout" class="btn btn-ghost btn-sm"> Logout </a>
+			{:else}
+				<a href="/auth/login" class="btn btn-ghost btn-sm"> Login </a>
 			{/if}
 
-			
-
 			<a
-			href="channel/new"
-			class="group inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white transition-colors hover:border-white/40 hover:bg-white/10"
-		>
-			<FluentAdd24Regular class="size-4" />
-			<span class="text-sm font-medium">New Channel</span>
-		</a>
+				href="/channel/new"
+				class="group inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white transition-colors hover:border-white/40 hover:bg-white/10"
+			>
+				<FluentAdd24Regular class="size-4" />
+				<span class="text-sm font-medium">New Channel</span>
+			</a>
 		</div>
 
 		<div class="flex gap-2">
@@ -123,13 +132,17 @@
 				{/if}
 			</a>
 
-			{#if data.session && data.user}
+				{#if data.session && data.user && data.user.isAdmin}
 				<a href="/pending" class="btn btn-ghost btn-sm">
-					{#if data.session && data.user && data.user.isAdmin}
+				
 						Pending changes
-					{:else}
-						My pending changes
-					{/if}
+					
+				</a>
+				{:else if data.session && data.user}
+				<a href="/submissions" class="btn btn-ghost btn-sm">
+					
+						My submissions
+					
 				</a>
 			{/if}
 		</div>
