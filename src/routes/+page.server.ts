@@ -3,9 +3,10 @@ import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
 import { sources } from '$lib/server/schema';
 import { ilike, eq, and } from 'drizzle-orm';
+import { error } from '@sveltejs/kit';
 import type { SQL } from 'drizzle-orm';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, locals }) => {
 	const name = url.searchParams.get('name') || undefined;
 	const bias = url.searchParams.get('bias') || undefined;
 
@@ -37,13 +38,15 @@ export const load: PageServerLoad = async ({ url }) => {
 		const channels = await query.orderBy(sources.channel_name);
 
 		return {
-			channels
+			channels,
+			user: locals.user,
+			session: locals.session
 		};
-	} catch (error) {
-		console.error('Error loading channels:', error);
-		return {
-			channels: []
-		};
+	} catch (err) {
+		console.error('Error loading channels:', err);
+		throw error(500, {
+			message: 'Failed to load channels. Please try again later.'
+		});
 	}
 };
 
@@ -84,12 +87,11 @@ export const actions: Actions = {
 				success: true,
 				channels
 			};
-		} catch (error) {
-			console.error('Search failed:', error);
+		} catch (err) {
+			console.error('Search failed:', err);
 			return {
 				success: false,
-				channels: [],
-				error: 'Search failed. Please try again.'
+				error: 'Search failed. Please try again later.'
 			};
 		}
 	}

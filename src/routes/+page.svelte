@@ -5,7 +5,9 @@
 	import SimpleIconsTelegram from '~icons/simple-icons/telegram';
 	import FluentArrowRight24Regular from '~icons/fluent/arrow-right-24-regular';
 	import FluentSearch24Regular from '~icons/fluent/search-24-regular';
+	import FluentErrorCircle24Regular from '~icons/fluent/error-circle-24-regular';
 	import type { PageData, ActionData } from './$types';
+	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import { page } from '$app/state';
 
 	interface Props {
@@ -23,15 +25,19 @@
 
 	let { data, form }: Props = $props();
 
+	let favoritesCount= 1; // fix this
+
 	let searchTerm = $state(page.url.searchParams.get('name') || '');
 	let selectedBias = $state(page.url.searchParams.get('bias') || '');
 	let searchResults: Channel[] = $state(data.channels || []);
 	let loading = $state(false);
 	let imageLoadedStates = $state<Record<string, boolean>>({});
+	let searchError = $state<string | null>(null);
 
 	$effect(() => {
 		if (form?.channels) {
 			searchResults = form.channels;
+			searchError = form.error || null;
 		}
 	});
 
@@ -43,6 +49,7 @@
 
 	function handleFormSubmit() {
 		loading = true;
+		searchError = null;
 		return async ({ update }) => {
 			await update({ reset: false });
 			loading = false;
@@ -59,7 +66,7 @@
 	}
 
 	const showEmptyState = $derived(
-		!loading && searchResults.length === 0 && (searchTerm || selectedBias)
+		!loading && !searchError && searchResults.length === 0 && (searchTerm || selectedBias)
 	);
 </script>
 
@@ -82,7 +89,52 @@
 		<SimpleIconsTelegram class="size-4" />
 		<span class="text-sm font-medium">NewsMix</span>
 	</a>
+
+
 </header>
+
+
+<!-- Auth Navigation -->
+<div class="card mb-6 border border-white/30 bg-white/10 backdrop-blur-md">
+	<div class="card-body flex flex-row-reverse justify-between gap-x-2 p-1 md:p-2">
+		<div class="flex gap-2">
+			{#if data.session && data.user}
+				<a href={resolve("/auth/logout")} class="btn btn-ghost btn-sm"> Logout </a>
+				{:else}
+					<a href="/auth/login" class="btn btn-ghost btn-sm"> Login </a>
+			{/if}
+
+			
+
+			<a
+			href="channel/new"
+			class="group inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white transition-colors hover:border-white/40 hover:bg-white/10"
+		>
+			<FluentAdd24Regular class="size-4" />
+			<span class="text-sm font-medium">New Channel</span>
+		</a>
+		</div>
+
+		<div class="flex gap-2">
+			<a href="/favorites" class="btn btn-ghost btn-sm">
+				Favorites
+				{#if favoritesCount > 0}
+					<span class="badge badge-sm badge-primary">{favoritesCount}</span>
+				{/if}
+			</a>
+
+			{#if data.session && data.user}
+				<a href="/pending" class="btn btn-ghost btn-sm">
+					{#if data.session && data.user && data.user.isAdmin}
+						Pending changes
+					{:else}
+						My pending changes
+					{/if}
+				</a>
+			{/if}
+		</div>
+	</div>
+</div>
 
 <!-- Search Form -->
 <div class="mb-8 rounded-lg border border-white/20 bg-white/5 p-6">
@@ -128,6 +180,17 @@
 		</div>
 	</form>
 </div>
+
+<!-- Error State -->
+{#if searchError}
+	<div class="alert alert-error mb-8 border-red-500/20 bg-red-500/10">
+		<FluentErrorCircle24Regular class="size-6 text-red-400" />
+		<div>
+			<h3 class="font-semibold text-red-400">Error</h3>
+			<div class="text-sm text-red-300/80">{searchError}</div>
+		</div>
+	</div>
+{/if}
 
 <!-- Loading State -->
 {#if loading}
