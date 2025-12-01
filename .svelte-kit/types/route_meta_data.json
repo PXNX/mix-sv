@@ -1,9 +1,48 @@
 {
+	"/(public)": [
+		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(authorized)": [
+		"src/routes/(authorized)/+layout.server.ts"
+	],
 	"/": [
 		"src/routes/+page.server.ts"
+	],
+	"/(public)/about": [
+		"src/routes/(public)/about/+page.server.ts",
+		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(public)/auth/callback/google": [
+		"src/routes/(public)/auth/callback/google/+server.ts"
+	],
+	"/(public)/auth/login": [
+		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(public)/auth/login/google": [
+		"src/routes/(public)/auth/login/google/+server.ts"
+	],
+	"/(public)/auth/logout": [
+		"src/routes/(public)/auth/logout/+server.ts"
+	],
+	"/(authorized)/channel/new": [
+		"src/routes/(authorized)/+layout.server.ts"
 	],
 	"/channel/[id]": [
 		"src/routes/channel/[id]/+page.server.ts"
 	],
-	"/privacy-policy": []
+	"/(public)/contact": [
+		"src/routes/(public)/contact/+page.server.ts",
+		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(admin)/pending": [
+		"src/routes/(admin)/pending/+page.server.ts"
+	],
+	"/(public)/privacy-policy": [
+		"src/routes/(public)/privacy-policy/+page.server.ts",
+		"src/routes/(public)/+layout.server.ts"
+	],
+	"/(public)/terms-of-service": [
+		"src/routes/(public)/terms-of-service/+page.server.ts",
+		"src/routes/(public)/+layout.server.ts"
+	]
 }

@@ -27,10 +27,14 @@
  */
 declare module '$env/static/private' {
 	export const DATABASE_URL: string;
+	export const GOOGLE_CLIENT_ID: string;
+	export const GOOGLE_CLIENT_SECRET: string;
+	export const GOOGLE_REDIRECT_URI: string;
 	export const ALLUSERSPROFILE: string;
 	export const APPDATA: string;
 	export const BASH_ENV: string;
 	export const BUN_INSPECT_CONNECT_TO: string;
+	export const BUN_WHICH_IGNORE_CWD: string;
 	export const CHROME_CRASHPAD_PIPE_NAME: string;
 	export const COLORTERM: string;
 	export const CommonProgramFiles: string;
@@ -41,13 +45,18 @@ declare module '$env/static/private' {
 	export const DokanLibrary1_LibraryPath_x64: string;
 	export const DokanLibrary1_LibraryPath_x86: string;
 	export const DriverData: string;
+	export const EFC_13360: string;
 	export const flutter: string;
+	export const FPS_BROWSER_APP_PROFILE_STRING: string;
+	export const FPS_BROWSER_USER_PROFILE_STRING: string;
 	export const GIT_ASKPASS: string;
 	export const GIT_SSH: string;
 	export const GRADLE_HOME: string;
 	export const HOMEDRIVE: string;
 	export const HOMEPATH: string;
+	export const INIT_CWD: string;
 	export const JAVA_HOME: string;
+	export const JOBS: string;
 	export const LANG: string;
 	export const LOCALAPPDATA: string;
 	export const LOGONSERVER: string;
@@ -106,7 +115,6 @@ declare module '$env/static/private' {
 	export const windir: string;
 	export const WSLENV: string;
 	export const ZES_ENABLE_SYSMAN: string;
-	export const __COMPAT_LAYER: string;
 }
 
 /**
@@ -137,10 +145,14 @@ declare module '$env/static/public' {
 declare module '$env/dynamic/private' {
 	export const env: {
 		DATABASE_URL: string;
+		GOOGLE_CLIENT_ID: string;
+		GOOGLE_CLIENT_SECRET: string;
+		GOOGLE_REDIRECT_URI: string;
 		ALLUSERSPROFILE: string;
 		APPDATA: string;
 		BASH_ENV: string;
 		BUN_INSPECT_CONNECT_TO: string;
+		BUN_WHICH_IGNORE_CWD: string;
 		CHROME_CRASHPAD_PIPE_NAME: string;
 		COLORTERM: string;
 		CommonProgramFiles: string;
@@ -151,13 +163,18 @@ declare module '$env/dynamic/private' {
 		DokanLibrary1_LibraryPath_x64: string;
 		DokanLibrary1_LibraryPath_x86: string;
 		DriverData: string;
+		EFC_13360: string;
 		flutter: string;
+		FPS_BROWSER_APP_PROFILE_STRING: string;
+		FPS_BROWSER_USER_PROFILE_STRING: string;
 		GIT_ASKPASS: string;
 		GIT_SSH: string;
 		GRADLE_HOME: string;
 		HOMEDRIVE: string;
 		HOMEPATH: string;
+		INIT_CWD: string;
 		JAVA_HOME: string;
+		JOBS: string;
 		LANG: string;
 		LOCALAPPDATA: string;
 		LOGONSERVER: string;
@@ -216,7 +233,6 @@ declare module '$env/dynamic/private' {
 		windir: string;
 		WSLENV: string;
 		ZES_ENABLE_SYSMAN: string;
-		__COMPAT_LAYER: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}
