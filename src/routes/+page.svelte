@@ -10,6 +10,7 @@
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import { favoritesStore } from '$lib/stores/favorites.svelte';
 	import type { PageData, ActionData } from './$types';
+	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
 
 	interface Props {
 		data: PageData;
@@ -225,21 +226,11 @@
 				style="view-transition-name: channel-{channel.channel_id}"
 			>
 				<div class="flex items-center gap-4">
-					<!-- Avatar -->
-					<div class="relative shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
-						{#if !imageLoadedStates[channel.channel_id]}
-							<div class="size-16 animate-pulse rounded-full bg-white/10"></div>
-						{/if}
-						<img
-							src={channel.avatar}
-							alt={channel.channel_name}
-							class="size-16 rounded-full object-cover {!imageLoadedStates[channel.channel_id]
-								? 'absolute inset-0 opacity-0'
-								: ''}"
-							loading="lazy"
-							onload={() => handleImageLoad(channel.channel_id)}
-						/>
-					</div>
+					<ChannelAvatar 
+	username={channel.username} 
+	alt={channel.channel_name}
+	size="md"
+/>
 
 					<!-- Channel Info -->
 					<div class="min-w-0 flex-1">

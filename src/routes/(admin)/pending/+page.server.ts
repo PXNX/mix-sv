@@ -2,7 +2,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
-import { pendingEdits, pendingCreations, sources, users } from '$lib/server/schema';
+import { pendingEdits, pendingCreations, sources, users, bloats } from '$lib/server/schema';
 import { eq, and } from 'drizzle-orm';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
@@ -81,28 +81,56 @@ export const actions: Actions = {
 			return { success: false, error: 'Edit not found' };
 		}
 
-		// Prepare the update object with only non-null fields
-		const updateData: any = {};
-		if (edit[0].channelName !== null) updateData.channel_name = edit[0].channelName;
-		if (edit[0].username !== null) updateData.username = edit[0].username;
-		if (edit[0].bias !== null) updateData.bias = edit[0].bias;
-		if (edit[0].invite !== null) updateData.invite = edit[0].invite;
-		if (edit[0].avatar !== null) updateData.avatar = edit[0].avatar;
+		try {
+			// Prepare the update object with only non-null fields
+			const updateData: any = {};
+			if (edit[0].channelName !== null) updateData.channel_name = edit[0].channelName;
+			if (edit[0].username !== null) updateData.username = edit[0].username;
+			if (edit[0].bias !== null) updateData.bias = edit[0].bias;
+			if (edit[0].invite !== null) updateData.invite = edit[0].invite;
+			if (edit[0].avatar !== null) updateData.avatar = edit[0].avatar;
 
-		// Apply the edit to the source
-		await db.update(sources).set(updateData).where(eq(sources.channel_id, edit[0].channelId!));
+			// Apply the edit to the source
+			await db.update(sources).set(updateData).where(eq(sources.channel_id, edit[0].channelId!));
 
-		// Mark as approved
-		await db
-			.update(pendingEdits)
-			.set({
-				status: 'approved',
-				reviewedAt: new Date(),
-				reviewedBy: locals.user.id
-			})
-			.where(eq(pendingEdits.id, editId));
+			// Handle bloats if present
+			if (edit[0].bloats) {
+				try {
+					const bloatPatterns: string[] = JSON.parse(edit[0].bloats);
 
-		return { success: true };
+					// Delete existing bloats for this channel
+					await db.delete(bloats).where(eq(bloats.channel_id, edit[0].channelId!));
+
+					// Insert new bloats if any
+					if (bloatPatterns.length > 0) {
+						await db.insert(bloats).values(
+							bloatPatterns.map((pattern) => ({
+								channel_id: edit[0].channelId!,
+								pattern
+							}))
+						);
+					}
+				} catch (parseError) {
+					console.error('Error parsing bloats:', parseError);
+					// Continue even if bloats fail
+				}
+			}
+
+			// Mark as approved
+			await db
+				.update(pendingEdits)
+				.set({
+					status: 'approved',
+					reviewedAt: new Date(),
+					reviewedBy: locals.user.id
+				})
+				.where(eq(pendingEdits.id, editId));
+
+			return { success: true };
+		} catch (error) {
+			console.error('Error approving edit:', error);
+			return { success: false, error: 'Failed to approve edit' };
+		}
 	},
 
 	reject: async ({ request, locals }) => {
@@ -167,26 +195,55 @@ export const actions: Actions = {
 			return { success: false, error: 'Creation not found' };
 		}
 
-		// Create the new source
-		await db.insert(sources).values({
-			channel_name: creation[0].channelName,
-			username: creation[0].username,
-			bias: creation[0].bias,
-			invite: creation[0].invite,
-			avatar: creation[0].avatar
-		});
+		try {
+			// Create the new source
+			await db.insert(sources).values({
+				channel_id: creation[0].channelId!,
+				channel_name: creation[0].channelName,
+				username: creation[0].username,
+				bias: creation[0].bias,
+				invite: creation[0].invite,
+				avatar: creation[0].avatar
+			});
 
-		// Mark as approved
-		await db
-			.update(pendingCreations)
-			.set({
-				status: 'approved',
-				reviewedAt: new Date(),
-				reviewedBy: locals.user.id
-			})
-			.where(eq(pendingCreations.id, creationId));
+			// Handle bloats if present
+			if (creation[0].bloats) {
+				try {
+					const bloatPatterns: string[] = JSON.parse(creation[0].bloats);
 
-		return { success: true };
+					// Insert bloats if any
+					if (bloatPatterns.length > 0) {
+						await db.insert(bloats).values(
+							bloatPatterns.map((pattern) => ({
+								channel_id: creation[0].channelId!,
+								pattern
+							}))
+						);
+					}
+				} catch (parseError) {
+					console.error('Error parsing bloats:', parseError);
+					// Continue even if bloats fail
+				}
+			}
+
+			// Mark as approved
+			await db
+				.update(pendingCreations)
+				.set({
+					status: 'approved',
+					reviewedAt: new Date(),
+					reviewedBy: locals.user.id
+				})
+				.where(eq(pendingCreations.id, creationId));
+
+			return { success: true };
+		} catch (error) {
+			console.error('Error approving creation:', error);
+			return {
+				success: false,
+				error: 'Failed to approve creation. The channel ID may already exist.'
+			};
+		}
 	},
 
 	rejectCreation: async ({ request, locals }) => {

@@ -2,27 +2,16 @@
 <script lang="ts">
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
-	import * as v from 'valibot';
 	import FluentArrowLeft24Regular from '~icons/fluent/arrow-left-24-regular';
 	import FluentCheckmark24Regular from '~icons/fluent/checkmark-24-regular';
-	import FluentErrorCircle24Regular from '~icons/fluent/error-circle-24-regular';
 	import FluentInfo24Regular from '~icons/fluent/info-24-regular';
+	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
+	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
+	import FluentQuestionCircle24Regular from '~icons/fluent/question-circle-24-regular';
+	import { channelSchema } from './schema';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
-
-	const channelSchema = v.object({
-		channelName: v.pipe(v.string(), v.minLength(1, 'Channel name is required'), v.trim()),
-		username: v.pipe(
-			v.string(),
-			v.minLength(1, 'Username is required'),
-			v.trim(),
-			v.regex(/^@?[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-		),
-		bias: v.pipe(v.string(), v.minLength(1, 'Region is required')),
-		invite: v.optional(v.pipe(v.string(), v.trim()), ''),
-		avatar: v.optional(v.pipe(v.string(), v.url('Invalid URL format'), v.trim()), '')
-	});
 
 	const BIAS_OPTIONS = [
 		{ value: '🇺🇦', label: 'Ukraine', flag: '🇺🇦' },
@@ -34,6 +23,8 @@
 
 	let showSuccess = $state(false);
 	let successMessage = $state('');
+	let showChannelIdHelp = $state(false);
+	let channelLinkInput = $state('');
 
 	const { form, errors, enhance, delayed, message, submitting } = superForm(data.form, {
 		validators: valibotClient(channelSchema),
@@ -48,6 +39,57 @@
 			}
 		}
 	});
+
+	// Initialize bloats array if not present
+	if (!$form.bloats) {
+		$form.bloats = [];
+	}
+
+	let newBloatPattern = $state('');
+
+	function addBloat() {
+		const pattern = newBloatPattern.trim();
+		if (pattern && !$form.bloats.includes(pattern)) {
+			$form.bloats = [...$form.bloats, pattern];
+			newBloatPattern = '';
+		}
+	}
+
+	function removeBloat(index: number) {
+		$form.bloats = $form.bloats.filter((_, i) => i !== index);
+	}
+
+	function extractChannelId() {
+		const link = channelLinkInput.trim();
+		if (!link) return;
+
+		// Try to extract channel ID from various formats
+		// Format 1: https://t.me/c/1234567890/123 (private channel with message)
+		let match = link.match(/t\.me\/c\/(\d+)/);
+		if (match) {
+			$form.channelId = `-100${match[1]}`;
+			channelLinkInput = '';
+			return;
+		}
+
+		// Format 2: Just the numeric ID (with or without -100 prefix)
+		match = link.match(/^-?100(\d+)$/);
+		if (match) {
+			$form.channelId = `-100${match[1]}`;
+			channelLinkInput = '';
+			return;
+		}
+
+		// Format 3: Just numbers
+		match = link.match(/^(\d+)$/);
+		if (match) {
+			$form.channelId = `-100${match[1]}`;
+			channelLinkInput = '';
+			return;
+		}
+
+		alert('Could not extract channel ID from the provided link. Please try copying a message link from the channel.');
+	}
 </script>
 
 <svelte:head>
@@ -111,6 +153,78 @@
 <!-- Form -->
 <div class="rounded-lg border border-white/20 bg-white/5 p-6">
 	<form method="POST" action="?/create" use:enhance class="space-y-6">
+		<!-- Channel ID with Helper -->
+		<div>
+			<div class="mb-2 flex items-center gap-2">
+				<label for="channel-id" class="text-sm font-medium text-white">
+					Channel ID <span class="text-red-400">*</span>
+				</label>
+				<button
+					type="button"
+					class="text-white/60 hover:text-white"
+					onclick={() => (showChannelIdHelp = !showChannelIdHelp)}
+					title="How to find Channel ID"
+				>
+					<FluentQuestionCircle24Regular class="size-4" />
+				</button>
+			</div>
+
+			{#if showChannelIdHelp}
+				<div class="mb-3 rounded-lg border border-blue-500/20 bg-blue-500/5 p-4">
+					<h4 class="mb-2 text-sm font-semibold text-blue-400">How to Find the Channel ID:</h4>
+					<ol class="mb-3 space-y-1 text-xs text-blue-300/80">
+						<li>1. Open the Telegram channel in your desktop or web app</li>
+						<li>2. Click on any message to open it</li>
+						<li>3. Copy the message link (right-click → Copy Link)</li>
+						<li>4. Paste the link below to extract the channel ID</li>
+					</ol>
+					<p class="mb-3 text-xs text-blue-400/70">
+						The link will look like: <code class="rounded bg-blue-500/10 px-1">https://t.me/c/1234567890/123</code>
+					</p>
+
+					<div class="flex gap-2">
+						<input
+							type="text"
+							placeholder="Paste message link here (e.g., https://t.me/c/1234567890/123)"
+							class="flex-1 rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-2 text-sm text-white placeholder-white/40 focus:border-blue-500/40 focus:outline-none"
+							bind:value={channelLinkInput}
+							onkeydown={(e) => {
+								if (e.key === 'Enter') {
+									e.preventDefault();
+									extractChannelId();
+								}
+							}}
+						/>
+						<button
+							type="button"
+							class="rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-2 text-sm text-blue-400 hover:bg-blue-500/20"
+							onclick={extractChannelId}
+						>
+							Extract ID
+						</button>
+					</div>
+				</div>
+			{/if}
+
+			<input
+				id="channel-id"
+				type="text"
+				name="channelId"
+				placeholder="e.g., -1001234567890"
+				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 font-mono text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+				class:border-red-500={$errors.channelId}
+				bind:value={$form.channelId}
+				disabled={$submitting}
+			/>
+			{#if $errors.channelId}
+				<p class="mt-1 text-xs text-red-400">{$errors.channelId}</p>
+			{:else}
+				<p class="mt-1 text-xs text-white/50">
+					The unique numeric ID of the channel (usually starts with -100)
+				</p>
+			{/if}
+		</div>
+
 		<!-- Channel Name -->
 		<div>
 			<label for="channel-name" class="mb-2 block text-sm font-medium text-white">
@@ -201,31 +315,77 @@
 			{/if}
 		</div>
 
-		<!-- Avatar URL (Optional) -->
-		<div>
-			<label for="avatar" class="mb-2 block text-sm font-medium text-white"> Avatar URL </label>
-			<input
-				id="avatar"
-				type="url"
-				name="avatar"
-				placeholder="https://example.com/avatar.jpg"
-				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.avatar}
-				bind:value={$form.avatar}
-				disabled={$submitting}
-			/>
-			{#if $errors.avatar}
-				<p class="mt-1 text-xs text-red-400">{$errors.avatar}</p>
+
+
+		<!-- Bloats Section -->
+		<div class="border-t border-white/10 pt-6">
+			<label class="mb-3 block text-sm font-medium text-white">
+				Bloat Patterns
+				<span class="ml-2 text-xs font-normal text-white/60">(Optional regex patterns to filter ads/footers)</span>
+			</label>
+			
+			<!-- Add new pattern -->
+			<div class="mb-4 flex gap-2">
+				<input
+					type="text"
+					placeholder="Enter regex pattern, e.g., Subscribe to our channel|Join us on"
+					class="flex-1 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+					bind:value={newBloatPattern}
+					disabled={$submitting}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							addBloat();
+						}
+					}}
+				/>
+				<button
+					type="button"
+					class="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+					onclick={addBloat}
+					disabled={$submitting || !newBloatPattern.trim()}
+				>
+					<FluentAdd24Regular class="size-5" />
+					<span>Add</span>
+				</button>
+			</div>
+
+			<p class="mb-3 text-xs text-white/50">
+				Add regex patterns to automatically remove advertisements or repetitive footers from messages.
+			</p>
+
+			<!-- Hidden input for form submission -->
+			{#each $form.bloats as pattern, i}
+				<input type="hidden" name="bloats" value={pattern} />
+			{/each}
+
+			<!-- List of patterns -->
+			{#if $form.bloats.length > 0}
+				<div class="space-y-2">
+					{#each $form.bloats as pattern, index}
+						<div class="group flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
+							<code class="flex-1 break-all text-sm text-green-400">{pattern}</code>
+							<button
+								type="button"
+								class="text-white/40 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+								onclick={() => removeBloat(index)}
+								disabled={$submitting}
+								title="Remove pattern"
+							>
+								<FluentDelete24Regular class="size-5" />
+							</button>
+						</div>
+					{/each}
+				</div>
 			{:else}
-				<p class="mt-1 text-xs text-white/50">
-					Optional: Direct link to the channel's avatar image
-				</p>
+				<div class="rounded-lg border border-dashed border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
+					No bloat patterns added yet. Add patterns above to filter unwanted content.
+				</div>
 			{/if}
 		</div>
 
 		<!-- Submit Button -->
-		<div class="flex justify-end pt-4">
-		
+		<div class="flex justify-end border-t border-white/10 pt-6">
 			<button
 				type="submit"
 				class="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"

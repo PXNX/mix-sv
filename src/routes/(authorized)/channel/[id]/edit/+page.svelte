@@ -5,9 +5,9 @@
 	import FluentArrowLeft24Regular from '~icons/fluent/arrow-left-24-regular';
 	import FluentCheckmark24Regular from '~icons/fluent/checkmark-24-regular';
 	import FluentInfo24Regular from '~icons/fluent/info-24-regular';
+	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
+	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
 	import { channelSchema } from './schema.js';
-
-
 
 	let { data } = $props();
 
@@ -23,13 +23,33 @@
 		{ value: '🇨🇦', label: 'Canada', flag: '🇨🇦' }
 	];
 
+	// Initialize bloats array if not present
+	if (!$form.bloats) {
+		$form.bloats = [];
+	}
+
+	let newBloatPattern = $state('');
+
+	function addBloat() {
+		const pattern = newBloatPattern.trim();
+		if (pattern && !$form.bloats.includes(pattern)) {
+			$form.bloats = [...$form.bloats, pattern];
+			newBloatPattern = '';
+		}
+	}
+
+	function removeBloat(index: number) {
+		$form.bloats = $form.bloats.filter((_, i) => i !== index);
+	}
+
 	// Get the original data to compare against
 	const originalData = {
 		channel_name: data.channel.channel_name,
 		username: data.channel.username,
 		bias: data.channel.bias,
 		invite: data.channel.invite || '',
-		avatar: data.channel.avatar || ''
+		avatar: data.channel.avatar || '',
+		bloats: data.existingBloats || []
 	};
 
 	// Get pending edit data if it exists
@@ -39,7 +59,14 @@
 				username: data.pendingEdit.username || data.channel.username,
 				bias: data.pendingEdit.bias || data.channel.bias,
 				invite: data.pendingEdit.invite || '',
-				avatar: data.pendingEdit.avatar || ''
+				avatar: data.pendingEdit.avatar || '',
+				bloats: (() => {
+					try {
+						return data.pendingEdit.bloats ? JSON.parse(data.pendingEdit.bloats) : [];
+					} catch {
+						return [];
+					}
+				})()
 		  }
 		: null;
 
@@ -50,7 +77,16 @@
 			username: $form.username?.trim() || '',
 			bias: $form.bias || '',
 			invite: $form.invite?.trim() || '',
-			avatar: $form.avatar?.trim() || ''
+			avatar: $form.avatar?.trim() || '',
+			bloats: $form.bloats || []
+		};
+
+		// Helper to compare arrays
+		const arraysEqual = (a: string[], b: string[]) => {
+			if (a.length !== b.length) return false;
+			const sortedA = [...a].sort();
+			const sortedB = [...b].sort();
+			return sortedA.every((val, i) => val === sortedB[i]);
 		};
 
 		// Check if different from original channel data
@@ -59,7 +95,8 @@
 			current.username !== originalData.username ||
 			current.bias !== originalData.bias ||
 			current.invite !== originalData.invite ||
-			current.avatar !== originalData.avatar;
+			current.avatar !== originalData.avatar ||
+			!arraysEqual(current.bloats, originalData.bloats);
 
 		// If there's pending data, also check if different from pending
 		if (pendingData) {
@@ -68,7 +105,8 @@
 				current.username !== pendingData.username ||
 				current.bias !== pendingData.bias ||
 				current.invite !== pendingData.invite ||
-				current.avatar !== pendingData.avatar;
+				current.avatar !== pendingData.avatar ||
+				!arraysEqual(current.bloats, pendingData.bloats);
 
 			return differentFromPending;
 		}
@@ -254,9 +292,75 @@
 			{/if}
 		</div>
 
-		<!-- Submit Button -->
-		<div class="flex justify-end pt-4">
+		<!-- Bloats Section -->
+		<div class="border-t border-white/10 pt-6">
+			<label class="mb-3 block text-sm font-medium text-white">
+				Bloat Patterns
+				<span class="ml-2 text-xs font-normal text-white/60">(Regex patterns to filter ads/footers)</span>
+			</label>
 			
+			<!-- Add new pattern -->
+			<div class="mb-4 flex gap-2">
+				<input
+					type="text"
+					placeholder="Enter regex pattern, e.g., Subscribe to our channel|Join us on"
+					class="flex-1 rounded-lg border border-white/20 bg-white/5 px-4 py-2 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+					bind:value={newBloatPattern}
+					disabled={$submitting}
+					onkeydown={(e) => {
+						if (e.key === 'Enter') {
+							e.preventDefault();
+							addBloat();
+						}
+					}}
+				/>
+				<button
+					type="button"
+					class="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"
+					onclick={addBloat}
+					disabled={$submitting || !newBloatPattern.trim()}
+				>
+					<FluentAdd24Regular class="size-5" />
+					<span>Add</span>
+				</button>
+			</div>
+
+			<p class="mb-3 text-xs text-white/50">
+				Add regex patterns to automatically remove advertisements or repetitive footers from messages.
+			</p>
+
+			<!-- Hidden input for form submission -->
+			{#each $form.bloats as pattern, i}
+				<input type="hidden" name="bloats" value={pattern} />
+			{/each}
+
+			<!-- List of patterns -->
+			{#if $form.bloats.length > 0}
+				<div class="space-y-2">
+					{#each $form.bloats as pattern, index}
+						<div class="group flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
+							<code class="flex-1 break-all text-sm text-green-400">{pattern}</code>
+							<button
+								type="button"
+								class="text-white/40 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
+								onclick={() => removeBloat(index)}
+								disabled={$submitting}
+								title="Remove pattern"
+							>
+								<FluentDelete24Regular class="size-5" />
+							</button>
+						</div>
+					{/each}
+				</div>
+			{:else}
+				<div class="rounded-lg border border-dashed border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
+					No bloat patterns added yet. Add patterns above to filter unwanted content.
+				</div>
+			{/if}
+		</div>
+
+		<!-- Submit Button -->
+		<div class="flex justify-end border-t border-white/10 pt-6">
 			<button
 				type="submit"
 				class="flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-6 py-3 font-medium text-white transition-colors hover:border-white/40 hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50"

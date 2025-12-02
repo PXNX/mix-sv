@@ -3,43 +3,40 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { pendingCreations, sources } from '$lib/server/schema';
+import { pendingCreations, sources, bloats } from '$lib/server/schema';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import * as v from 'valibot';
-
-// Define the schema
-const channelSchema = v.object({
-	channelName: v.pipe(v.string(), v.minLength(1, 'Channel name is required'), v.trim()),
-	username: v.pipe(
-		v.string(),
-		v.minLength(1, 'Username is required'),
-		v.trim(),
-		v.regex(/^@?[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores')
-	),
-	bias: v.pipe(v.string(), v.minLength(1, 'Region is required')),
-	invite: v.optional(v.pipe(v.string(), v.trim()), ''),
-	avatar: v.optional(v.pipe(v.string(), v.url('Invalid URL format'), v.trim()), '')
-});
+import { channelSchema } from './schema';
+import { eq } from 'drizzle-orm';
 
 export const load = async ({ locals }: Parameters<PageServerLoad>[0]) => {
 	const form = await superValidate(valibot(channelSchema));
-
 	return {
 		form,
-		isAdmin: locals.user.isAdmin
+		isAdmin: locals.user?.isAdmin || false
 	};
 };
 
 export const actions = {
 	create: async ({ request, locals }: import('./$types').RequestEvent) => {
-		const form = await superValidate(request, valibot(channelSchema));
+		if (!locals.user) {
+			return fail(401, { message: 'Unauthorized' });
+		}
 
+		const form = await superValidate(request, valibot(channelSchema));
 		if (!form.valid) {
 			return fail(400, { form });
 		}
 
-		const { channelName, username, bias, invite, avatar } = form.data;
+		const {
+			channelId,
+			channelName,
+			username,
+			bias,
+			invite,
+
+			bloats: bloatPatterns
+		} = form.data;
 
 		// Clean username (remove @ if present)
 		const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
@@ -58,16 +55,41 @@ export const actions = {
 			}
 		}
 
+		// Parse channel ID to number
+		const channelIdNum = parseInt(channelId, 10);
+
 		try {
+			// Check if channel ID already exists
+			const existingChannel = await db.query.sources.findFirst({
+				where: eq(sources.channel_id, channelIdNum)
+			});
+
+			if (existingChannel) {
+				return fail(400, {
+					form,
+					error: 'A channel with this ID already exists.'
+				});
+			}
+
 			// If admin, create channel directly
 			if (locals.user.isAdmin) {
 				await db.insert(sources).values({
+					channel_id: channelIdNum,
 					channel_name: channelName,
 					username: cleanUsername,
 					bias,
-					invite: inviteHash,
-					avatar: avatar || null
+					invite: inviteHash
 				});
+
+				// Insert bloats if any
+				if (bloatPatterns && bloatPatterns.length > 0) {
+					await db.insert(bloats).values(
+						bloatPatterns.map((pattern) => ({
+							channel_id: channelIdNum,
+							pattern
+						}))
+					);
+				}
 
 				return {
 					form,
@@ -77,13 +99,17 @@ export const actions = {
 			}
 
 			// Non-admin: Insert pending creation for review
+			const bloatsJson = JSON.stringify(bloatPatterns || []);
+
 			await db.insert(pendingCreations).values({
 				userId: locals.user.id,
+				channelId: channelIdNum,
 				channelName,
 				username: cleanUsername,
 				bias,
 				invite: inviteHash,
-				avatar: avatar || null,
+
+				bloats: bloatsJson,
 				status: 'pending'
 			});
 

@@ -4,7 +4,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { sources, pendingEdits } from '$lib/server/schema';
+import { sources, pendingEdits, bloats } from '$lib/server/schema';
 import { eq, and } from 'drizzle-orm';
 import { channelSchema } from './schema';
 
@@ -27,6 +27,13 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		redirect(302, '/');
 	}
 
+	// Get existing bloats
+	const existingBloats = await db.query.bloats.findMany({
+		where: eq(bloats.channel_id, channelId)
+	});
+
+	const bloatPatterns = existingBloats.map((b) => b.pattern);
+
 	// Check for pending edits by this user
 	const pendingEdit = await db.query.pendingEdits.findFirst({
 		where: and(
@@ -36,6 +43,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		)
 	});
 
+	// Parse pending bloats if they exist
+	let pendingBloats: string[] = [];
+	if (pendingEdit?.bloats) {
+		try {
+			pendingBloats = JSON.parse(pendingEdit.bloats);
+		} catch (e) {
+			console.error('Failed to parse pending bloats:', e);
+		}
+	}
+
 	// Use pending edit data if available, otherwise use channel data
 	const formData = pendingEdit
 		? {
@@ -43,14 +60,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				username: pendingEdit.username || channel.username,
 				bias: pendingEdit.bias || channel.bias,
 				invite: pendingEdit.invite || channel.invite || '',
-				avatar: pendingEdit.avatar || channel.avatar || ''
+				avatar: pendingEdit.avatar || channel.avatar || '',
+				bloats: pendingBloats
 			}
 		: {
 				channel_name: channel.channel_name,
 				username: channel.username,
 				bias: channel.bias,
 				invite: channel.invite || '',
-				avatar: channel.avatar || ''
+				avatar: channel.avatar || '',
+				bloats: bloatPatterns
 			};
 
 	const form = await superValidate(formData, valibot(channelSchema));
@@ -59,7 +78,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		form,
 		channel,
 		pendingEdit,
-		isAdmin: locals.user.isAdmin
+		isAdmin: locals.user.isAdmin,
+		existingBloats: bloatPatterns
 	};
 };
 
@@ -89,6 +109,18 @@ export const actions: Actions = {
 						avatar: form.data.avatar || null
 					})
 					.where(eq(sources.channel_id, channelId));
+
+				// Update bloats - delete all existing and insert new ones
+				await db.delete(bloats).where(eq(bloats.channel_id, channelId));
+
+				if (form.data.bloats && form.data.bloats.length > 0) {
+					await db.insert(bloats).values(
+						form.data.bloats.map((pattern) => ({
+							channel_id: channelId,
+							pattern
+						}))
+					);
+				}
 			} else {
 				// Non-admin: Create or update pending edit
 				const existingPending = await db.query.pendingEdits.findFirst({
@@ -98,6 +130,8 @@ export const actions: Actions = {
 						eq(pendingEdits.status, 'pending')
 					)
 				});
+
+				const bloatsJson = JSON.stringify(form.data.bloats || []);
 
 				if (existingPending) {
 					// Update existing pending edit
@@ -109,6 +143,7 @@ export const actions: Actions = {
 							bias: form.data.bias,
 							invite: form.data.invite || null,
 							avatar: form.data.avatar || null,
+							bloats: bloatsJson,
 							createdAt: new Date()
 						})
 						.where(eq(pendingEdits.id, existingPending.id));
@@ -122,6 +157,7 @@ export const actions: Actions = {
 						bias: form.data.bias,
 						invite: form.data.invite || null,
 						avatar: form.data.avatar || null,
+						bloats: bloatsJson,
 						status: 'pending'
 					});
 				}

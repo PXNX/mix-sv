@@ -6,11 +6,6 @@ import { db } from '$lib/server/db';
 import { pendingCreations, pendingEdits } from '$lib/server/schema';
 
 export const load: PageServerLoad = async ({ locals }) => {
-	// Redirect to login if not authenticated
-	if (!locals.user) {
-		redirect(302, '/login');
-	}
-
 	// Fetch user's pending creations
 	const userCreations = await db
 		.select()

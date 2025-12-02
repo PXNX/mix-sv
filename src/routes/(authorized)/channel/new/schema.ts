@@ -1,8 +1,14 @@
-// src/routes/(authorized)/channel/[id]/edit/schema.ts
+// src/routes/channel/new/schema.ts
 import * as v from 'valibot';
 
 export const channelSchema = v.object({
-	channel_name: v.pipe(v.string(), v.minLength(1, 'Channel name is required'), v.trim()),
+	channelId: v.pipe(
+		v.string(),
+		v.minLength(1, 'Channel ID is required'),
+		v.trim(),
+		v.regex(/^-?\d+$/, 'Channel ID must be a valid number (e.g., -1001234567890)')
+	),
+	channelName: v.pipe(v.string(), v.minLength(1, 'Channel name is required'), v.trim()),
 	username: v.pipe(
 		v.string(),
 		v.minLength(1, 'Username is required'),
@@ -11,6 +17,5 @@ export const channelSchema = v.object({
 	),
 	bias: v.pipe(v.string(), v.minLength(1, 'Region is required')),
 	invite: v.optional(v.pipe(v.string(), v.trim()), ''),
-	avatar: v.optional(v.pipe(v.string(), v.url('Invalid URL format'), v.trim()), ''),
 	bloats: v.optional(v.array(v.pipe(v.string(), v.trim(), v.minLength(1))), [])
 });

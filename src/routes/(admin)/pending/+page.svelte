@@ -1,3 +1,4 @@
+<!-- src/routes/(authorized)/pending/+page.svelte -->
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import FluentEmojiCheckMark from '~icons/fluent-emoji/check-mark';
@@ -20,6 +21,16 @@
 		oldValue: any;
 		newValue: any;
 		hasChanged: boolean;
+		type?: 'text' | 'array';
+	}
+
+	function parseBloats(bloatsJson: string | null): string[] {
+		if (!bloatsJson) return [];
+		try {
+			return JSON.parse(bloatsJson);
+		} catch {
+			return [];
+		}
 	}
 
 	function getChanges(edit: any, source: any): DiffField[] {
@@ -28,33 +39,52 @@
 				label: 'Channel Name',
 				oldValue: source.channel_name,
 				newValue: edit.channelName,
-				hasChanged: edit.channelName !== null && edit.channelName !== source.channel_name
+				hasChanged: edit.channelName !== null && edit.channelName !== source.channel_name,
+				type: 'text'
 			},
 			{
 				label: 'Username',
 				oldValue: source.username,
 				newValue: edit.username,
-				hasChanged: edit.username !== null && edit.username !== source.username
+				hasChanged: edit.username !== null && edit.username !== source.username,
+				type: 'text'
 			},
 			{
 				label: 'Bias',
 				oldValue: source.bias,
 				newValue: edit.bias,
-				hasChanged: edit.bias !== null && edit.bias !== source.bias
+				hasChanged: edit.bias !== null && edit.bias !== source.bias,
+				type: 'text'
 			},
 			{
 				label: 'Invite Link',
 				oldValue: source.invite,
 				newValue: edit.invite,
-				hasChanged: edit.invite !== null && edit.invite !== source.invite
+				hasChanged: edit.invite !== null && edit.invite !== source.invite,
+				type: 'text'
 			},
 			{
 				label: 'Avatar',
 				oldValue: source.avatar,
 				newValue: edit.avatar,
-				hasChanged: edit.avatar !== null && edit.avatar !== source.avatar
+				hasChanged: edit.avatar !== null && edit.avatar !== source.avatar,
+				type: 'text'
 			}
 		];
+
+		// Add bloats comparison if present in edit
+		if (edit.bloats !== null) {
+			const newBloats = parseBloats(edit.bloats);
+			const oldBloats: string[] = []; // We'd need to fetch existing bloats, for now show as new
+			
+			fields.push({
+				label: 'Bloat Patterns',
+				oldValue: oldBloats,
+				newValue: newBloats,
+				hasChanged: true, // Consider changed if bloats field is present
+				type: 'array'
+			});
+		}
 
 		return fields.filter((f) => f.hasChanged);
 	}
@@ -92,8 +122,8 @@
 								{changes.length === 1 ? 'change' : 'changes'} proposed
 							</p>
 						</div>
-						<a href="/source/{source.channel_id}" class="text-blue-400 hover:text-blue-300">
-							View Source
+						<a href="/channel/{source.channel_id}" class="text-blue-400 hover:text-blue-300">
+							View Channel
 						</a>
 					</div>
 
@@ -101,21 +131,46 @@
 						{#each changes as change}
 							<div class="rounded-lg border border-white/10 bg-black/20 p-4">
 								<h4 class="mb-3 font-semibold text-white">{change.label}</h4>
-								<div class="space-y-2">
-									<div
-										class="flex items-start gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2"
-									>
-										<span class="font-mono text-xs text-red-400">−</span>
-										<span class="flex-1 text-sm text-red-200">{formatValue(change.oldValue)}</span>
+								
+								{#if change.type === 'array'}
+									<div class="space-y-2">
+										{#if Array.isArray(change.oldValue) && change.oldValue.length > 0}
+											<div class="rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2">
+												<span class="mb-2 block font-mono text-xs text-red-400">− Removed:</span>
+												<div class="space-y-1">
+													{#each change.oldValue as pattern}
+														<code class="block text-sm text-red-200">{pattern}</code>
+													{/each}
+												</div>
+											</div>
+										{/if}
+										{#if Array.isArray(change.newValue) && change.newValue.length > 0}
+											<div class="rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2">
+												<span class="mb-2 block font-mono text-xs text-green-400">+ Added:</span>
+												<div class="space-y-1">
+													{#each change.newValue as pattern}
+														<code class="block text-sm text-green-200">{pattern}</code>
+													{/each}
+												</div>
+											</div>
+										{:else if Array.isArray(change.newValue) && change.newValue.length === 0}
+											<div class="rounded border-l-4 border-yellow-500 bg-yellow-950/40 px-3 py-2">
+												<span class="text-sm text-yellow-200">All patterns removed</span>
+											</div>
+										{/if}
 									</div>
-									<div
-										class="flex items-start gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2"
-									>
-										<span class="font-mono text-xs text-green-400">+</span>
-										<span class="flex-1 text-sm text-green-200">{formatValue(change.newValue)}</span
-										>
+								{:else}
+									<div class="space-y-2">
+										<div class="flex items-start gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2">
+											<span class="font-mono text-xs text-red-400">−</span>
+											<span class="flex-1 text-sm text-red-200">{formatValue(change.oldValue)}</span>
+										</div>
+										<div class="flex items-start gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2">
+											<span class="font-mono text-xs text-green-400">+</span>
+											<span class="flex-1 text-sm text-green-200">{formatValue(change.newValue)}</span>
+										</div>
 									</div>
-								</div>
+								{/if}
 							</div>
 						{/each}
 					</div>
