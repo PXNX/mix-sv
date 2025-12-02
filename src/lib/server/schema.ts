@@ -16,8 +16,8 @@ import { relations } from 'drizzle-orm';
 export const sources = pgTable('sources', {
 	channel_id: bigint('channel_id', { mode: 'number' }).primaryKey(),
 	channel_name: text('channel_name').notNull(),
-	username: text('username').notNull(),
 	bias: text('bias').notNull(),
+	username: text('username'),
 	invite: text('invite'),
 	avatar: text('avatar')
 });

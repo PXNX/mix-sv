@@ -7,6 +7,7 @@
 	import FluentInfo24Regular from '~icons/fluent/info-24-regular';
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
+	import FileUpload from '$lib/component/FileUpload.svelte';
 	import { channelSchema } from './schema.js';
 
 	let { data } = $props();
@@ -29,6 +30,11 @@
 	}
 
 	let newBloatPattern = $state('');
+	let uploadError = $state('');
+	let avatarFile = $state<File | null>(null);
+
+	// Check if channel is private (no username)
+	const isPrivateChannel = $derived(!$form.username || $form.username.trim() === '');
 
 	function addBloat() {
 		const pattern = newBloatPattern.trim();
@@ -40,6 +46,21 @@
 
 	function removeBloat(index: number) {
 		$form.bloats = $form.bloats.filter((_, i) => i !== index);
+	}
+
+	function handleFileSelect(event: Event) {
+		const target = event.target as HTMLInputElement;
+		const file = target.files?.[0];
+		if (file) {
+			avatarFile = file;
+			uploadError = '';
+		}
+	}
+
+	function clearAvatarFile() {
+		avatarFile = null;
+		const fileInput = document.getElementById('avatar-file') as HTMLInputElement;
+		if (fileInput) fileInput.value = '';
 	}
 
 	// Get the original data to compare against
@@ -169,7 +190,7 @@
 
 <!-- Form -->
 <div class="rounded-lg border border-white/20 bg-white/5 p-6">
-	<form method="POST" use:enhance class="space-y-6">
+	<form method="POST" use:enhance class="space-y-6" enctype="multipart/form-data">
 		<!-- Channel Name -->
 		<div>
 			<label for="channel-name" class="mb-2 block text-sm font-medium text-white">
@@ -190,27 +211,112 @@
 			{/if}
 		</div>
 
-		<!-- Username -->
-		<div>
-			<label for="username" class="mb-2 block text-sm font-medium text-white">
-				Username <span class="text-red-400">*</span>
-			</label>
-			<input
-				id="username"
-				type="text"
-				name="username"
-				placeholder="e.g., bbcnews (without @)"
-				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.username}
-				bind:value={$form.username}
-				disabled={$submitting}
-			/>
-			{#if $errors.username}
-				<p class="mt-1 text-xs text-red-400">{$errors.username}</p>
-			{:else}
-				<p class="mt-1 text-xs text-white/50">Enter the username without the @ symbol</p>
-			{/if}
-		</div>
+		<!-- Avatar Upload (Only for Private Channels) -->
+		{#if isPrivateChannel}
+			<div>
+				<label class="mb-2 block text-sm font-medium text-white">
+					Channel Avatar <span class="text-xs text-white/50">(Optional - Private channels only)</span>
+				</label>
+				
+				{#if $form.avatar && !avatarFile}
+					<div class="mb-4 flex items-center gap-4 rounded-lg border border-white/20 bg-white/5 p-4">
+						<div class="h-16 w-16 overflow-hidden rounded-lg">
+							<img 
+								src={$form.avatar.startsWith('http') ? $form.avatar : `https://your-bucket-url.backblazeb2.com/${$form.avatar}`}
+								alt="Current avatar"
+								class="h-full w-full object-cover"
+							/>
+						</div>
+						<div class="flex-1">
+							<p class="text-sm text-white">Current avatar</p>
+							<button
+								type="button"
+								class="mt-1 text-xs text-red-400 hover:text-red-300"
+								onclick={() => ($form.avatar = '')}
+								disabled={$submitting}
+							>
+								Remove avatar
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				{#if avatarFile}
+					<div class="mb-4 flex items-center gap-4 rounded-lg border border-green-500/20 bg-green-500/10 p-4">
+						<div class="h-16 w-16 overflow-hidden rounded-lg">
+							<img 
+								src={URL.createObjectURL(avatarFile)}
+								alt="New avatar preview"
+								class="h-full w-full object-cover"
+							/>
+						</div>
+						<div class="flex-1">
+							<p class="text-sm text-white">{avatarFile.name}</p>
+							<p class="text-xs text-white/60">{Math.round(avatarFile.size / 1024)} KB</p>
+						</div>
+						<button
+							type="button"
+							class="text-white/40 transition-colors hover:text-red-400"
+							onclick={clearAvatarFile}
+							disabled={$submitting}
+						>
+							<FluentDelete24Regular class="size-5" />
+						</button>
+					</div>
+				{/if}
+
+				<div class="relative">
+					<input
+						id="avatar-file"
+						type="file"
+						name="avatarFile"
+						accept="image/*"
+						class="hidden"
+						onchange={handleFileSelect}
+						disabled={$submitting}
+					/>
+					<button
+						type="button"
+						onclick={() => document.getElementById('avatar-file')?.click()}
+						disabled={$submitting}
+						class="w-full rounded-lg border-2 border-dashed border-white/20 bg-white/5 px-4 py-8 text-center transition-colors hover:border-white/40 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+					>
+						<div class="flex flex-col items-center gap-2">
+							<div class="rounded-full bg-white/10 p-3">
+								<svg class="h-8 w-8 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+								</svg>
+							</div>
+							<div>
+								<p class="text-sm font-medium text-white">
+									{avatarFile ? 'Change avatar' : 'Click to upload avatar'}
+								</p>
+								<p class="mt-1 text-xs text-white/60">
+									PNG, JPG up to 5MB • Will be resized to 96x96px
+								</p>
+							</div>
+						</div>
+					</button>
+				</div>
+
+				{#if uploadError}
+					<p class="mt-2 text-xs text-red-400">{uploadError}</p>
+				{:else}
+					<p class="mt-2 text-xs text-white/50">
+						Avatar uploads are only available for private channels. Image will be uploaded when you submit the form.
+					</p>
+				{/if}
+
+				<!-- Hidden input for existing avatar key -->
+				<input type="hidden" name="avatar" bind:value={$form.avatar} />
+			</div>
+		{:else}
+			<div class="rounded-lg border border-white/10 bg-white/5 p-4">
+				<p class="text-sm text-white/60">
+					💡 Avatar uploads are only available for private channels (channels without a username).
+				</p>
+			</div>
+		{/if}
 
 		<!-- Region/Bias -->
 		<div>
@@ -238,9 +344,39 @@
 			{/if}
 		</div>
 
-		<!-- Invite Link (Optional) -->
+		<!-- Username -->
 		<div>
-			<label for="invite" class="mb-2 block text-sm font-medium text-white"> Invite Link </label>
+			<label for="username" class="mb-2 block text-sm font-medium text-white">
+				Username <span class="text-xs text-white/50">(Optional)</span>
+			</label>
+			<input
+				id="username"
+				type="text"
+				name="username"
+				placeholder="e.g., bbcnews (without @)"
+				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+				class:border-red-500={$errors.username}
+				bind:value={$form.username}
+				disabled={$submitting}
+			/>
+			{#if $errors.username}
+				<p class="mt-1 text-xs text-red-400">{$errors.username}</p>
+			{:else}
+				<p class="mt-1 text-xs text-white/50">
+					For public channels only. Leave empty for private channels.
+				</p>
+			{/if}
+		</div>
+
+		<!-- Invite Link -->
+		<div>
+			<label for="invite" class="mb-2 flex items-baseline gap-2 text-sm font-medium text-white">
+				<span>Invite Link</span>
+				{#if !$form.username || $form.username.trim() === ''}
+					<span class="text-red-400">*</span>
+					<span class="text-xs font-normal text-yellow-400">(Required for private channels)</span>
+				{/if}
+			</label>
 			<input
 				id="invite"
 				type="text"
@@ -248,47 +384,20 @@
 				placeholder="e.g., https://t.me/+AbCdEfGhIjK or just the hash"
 				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
 				class:border-red-500={$errors.invite}
+				class:border-yellow-500={!$form.username || $form.username.trim() === ''}
 				bind:value={$form.invite}
 				disabled={$submitting}
 			/>
 			{#if $errors.invite}
 				<p class="mt-1 text-xs text-red-400">{$errors.invite}</p>
+			{:else if !$form.username || $form.username.trim() === ''}
+				<p class="mt-1 text-xs text-yellow-400">
+					⚠️ This field is required when no username is provided (private channel).
+				</p>
 			{:else}
 				<p class="mt-1 text-xs text-white/50">
 					Only needed for private channels. Paste the full invite link or just the hash.
 				</p>
-			{/if}
-		</div>
-
-		<!-- Avatar URL (Optional) -->
-		<div>
-			<label for="avatar" class="mb-2 block text-sm font-medium text-white"> Avatar URL </label>
-			<input
-				id="avatar"
-				type="url"
-				name="avatar"
-				placeholder="https://example.com/avatar.jpg"
-				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.avatar}
-				bind:value={$form.avatar}
-				disabled={$submitting}
-			/>
-			{#if $errors.avatar}
-				<p class="mt-1 text-xs text-red-400">{$errors.avatar}</p>
-			{:else}
-				<p class="mt-1 text-xs text-white/50">
-					Optional: Direct link to the channel's avatar image
-				</p>
-			{/if}
-			{#if $form.avatar}
-				<div class="mt-3">
-					<p class="mb-2 text-xs font-medium text-white/80">Preview:</p>
-					<div class="avatar">
-						<div class="w-16 rounded-full ring ring-white/20 ring-offset-2 ring-offset-gray-900">
-							<img src={$form.avatar} alt="Avatar preview" />
-						</div>
-					</div>
-				</div>
 			{/if}
 		</div>
 

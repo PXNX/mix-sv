@@ -245,27 +245,7 @@
 			{/if}
 		</div>
 
-		<!-- Username -->
-		<div>
-			<label for="username" class="mb-2 block text-sm font-medium text-white">
-				Username <span class="text-red-400">*</span>
-			</label>
-			<input
-				id="username"
-				type="text"
-				name="username"
-				placeholder="e.g., bbcnews (without @)"
-				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.username}
-				bind:value={$form.username}
-				disabled={$submitting}
-			/>
-			{#if $errors.username}
-				<p class="mt-1 text-xs text-red-400">{$errors.username}</p>
-			{:else}
-				<p class="mt-1 text-xs text-white/50">Enter the username without the @ symbol</p>
-			{/if}
-		</div>
+		
 
 		<!-- Region/Bias -->
 		<div>
@@ -280,7 +260,7 @@
 				bind:value={$form.bias}
 				disabled={$submitting}
 			>
-				<option value="" class="bg-gray-900 text-white">Select a region</option>
+				<option value="" class="bg-gray-900 text-white">Select a bias</option>
 				{#each BIAS_OPTIONS as option}
 					<option value={option.value} class="bg-gray-900 text-white">
 						{option.flag}
@@ -293,27 +273,61 @@
 			{/if}
 		</div>
 
-		<!-- Invite Hash (Optional) -->
-		<div>
-			<label for="invite" class="mb-2 block text-sm font-medium text-white"> Invite Link </label>
-			<input
-				id="invite"
-				type="text"
-				name="invite"
-				placeholder="e.g., https://t.me/+AbCdEfGhIjK or just the hash"
-				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.invite}
-				bind:value={$form.invite}
-				disabled={$submitting}
-			/>
-			{#if $errors.invite}
-				<p class="mt-1 text-xs text-red-400">{$errors.invite}</p>
-			{:else}
-				<p class="mt-1 text-xs text-white/50">
-					Only needed for private channels. Paste the full invite link or just the hash.
-				</p>
-			{/if}
-		</div>
+<div>
+	<label for="username" class="mb-2 block text-sm font-medium text-white">
+		Username <span class="text-xs text-white/50">(Optional)</span>
+	</label>
+	<input
+		id="username"
+		type="text"
+		name="username"
+		placeholder="e.g., bbcnews (without @)"
+		class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+		class:border-red-500={$errors.username}
+		bind:value={$form.username}
+		disabled={$submitting}
+	/>
+	{#if $errors.username}
+		<p class="mt-1 text-xs text-red-400">{$errors.username}</p>
+	{:else}
+		<p class="mt-1 text-xs text-white/50">
+			For public channels only. Leave empty for private channels.
+		</p>
+	{/if}
+</div>
+
+<!-- Invite Link (Required for Private Channels) -->
+<div>
+	<label for="invite" class="mb-2 flex items-baseline gap-2 text-sm font-medium text-white">
+		<span>Invite Link</span>
+		{#if !$form.username || $form.username.trim() === ''}
+			<span class="text-red-400">*</span>
+			<span class="text-xs font-normal text-yellow-400">(Required for private channels)</span>
+		{/if}
+	</label>
+	<input
+		id="invite"
+		type="text"
+		name="invite"
+		placeholder="e.g., https://t.me/+AbCdEfGhIjK or just the hash"
+		class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+		class:border-red-500={$errors.invite}
+		class:border-yellow-500={!$form.username || $form.username.trim() === ''}
+		bind:value={$form.invite}
+		disabled={$submitting}
+	/>
+	{#if $errors.invite}
+		<p class="mt-1 text-xs text-red-400">{$errors.invite}</p>
+	{:else if !$form.username || $form.username.trim() === ''}
+		<p class="mt-1 text-xs text-yellow-400">
+			⚠️ This field is required when no username is provided (private channel).
+		</p>
+	{:else}
+		<p class="mt-1 text-xs text-white/50">
+			Only needed for private channels. Paste the full invite link or just the hash.
+		</p>
+	{/if}
+</div>
 
 
 

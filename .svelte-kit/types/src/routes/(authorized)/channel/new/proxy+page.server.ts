@@ -28,22 +28,19 @@ export const actions = {
 			return fail(400, { form });
 		}
 
-		const {
-			channelId,
-			channelName,
-			username,
-			bias,
-			invite,
+		const { channelId, channelName, username, bias, invite, bloats: bloatPatterns } = form.data;
 
-			bloats: bloatPatterns
-		} = form.data;
-
-		// Clean username (remove @ if present)
-		const cleanUsername = username.startsWith('@') ? username.slice(1) : username;
+		// Clean username (remove @ if present) - make it null if empty
+		const cleanUsername =
+			username && username.trim() !== ''
+				? username.startsWith('@')
+					? username.slice(1)
+					: username
+				: null;
 
 		// Process invite link if provided
 		let inviteHash: string | null = null;
-		if (invite) {
+		if (invite && invite.trim() !== '') {
 			// Extract hash from full invite link or use as-is
 			const inviteMatch = invite.match(/t\.me\/\+([A-Za-z0-9_-]+)/);
 			if (inviteMatch) {
@@ -108,7 +105,6 @@ export const actions = {
 				username: cleanUsername,
 				bias,
 				invite: inviteHash,
-
 				bloats: bloatsJson,
 				status: 'pending'
 			});
