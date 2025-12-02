@@ -5,6 +5,7 @@
 	import SimpleIconsTelegram from '~icons/simple-icons/telegram';
 
 	import type { PageData } from './$types';
+	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
 
 	interface Props {
 		data: PageData;
@@ -71,19 +72,11 @@
 	style="view-transition-name: channel-{channel.channel_id}"
 >
 	<div class="flex flex-col items-center gap-6 text-center">
-		<!-- Avatar -->
-		<div class="relative shrink-0" style="view-transition-name: avatar-{channel.channel_id}">
-			{#if !imageLoaded}
-				<div class="size-32 animate-pulse rounded-2xl bg-white/10"></div>
-			{/if}
-			<img
-				src={channel.avatar}
-				alt="Channel Avatar"
-				class="size-32 rounded-2xl object-cover {!imageLoaded ? 'absolute inset-0 opacity-0' : ''}"
-				loading="lazy"
-				onload={handleImageLoad}
-			/>
-		</div>
+<ChannelAvatar 
+	username={channel.username} 
+	alt={channel.channel_name}
+	size="lg"
+/>
 
 		<!-- Channel Info -->
 		<div class="space-y-3">

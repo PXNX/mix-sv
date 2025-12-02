@@ -1,5 +1,4 @@
 <!-- src/routes/submissions/+page.svelte -->
-
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import FluentArrowLeft24Regular from '~icons/fluent/arrow-left-24-regular';
@@ -56,8 +55,16 @@
 			minute: '2-digit'
 		});
 	}
-</script>
 
+	function parseBloats(bloatsJson: string | null): string[] {
+		if (!bloatsJson) return [];
+		try {
+			return JSON.parse(bloatsJson);
+		} catch {
+			return [];
+		}
+	}
+</script>
 
 <svelte:head>
 	<title>My Submissions - Telegram Channel Search</title>
@@ -132,9 +139,8 @@
 	{:else}
 		<div class="space-y-4">
 			{#each data.pendingCreations as creation}
-				<div
-					class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10"
-				>
+				{@const bloatPatterns = parseBloats(creation.bloats)}
+				<div class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10">
 					<div class="flex items-start justify-between">
 						<div class="flex-1">
 							<div class="mb-2 flex items-center gap-3">
@@ -147,6 +153,12 @@
 							</div>
 
 							<div class="mb-3 space-y-1 text-sm text-white/60">
+								{#if creation.channelId}
+									<p>
+										<span class="font-medium text-white/80">Channel ID:</span>
+										<code class="rounded bg-white/5 px-1 font-mono text-xs">{creation.channelId}</code>
+									</p>
+								{/if}
 								<p>
 									<span class="font-medium text-white/80">Username:</span>
 									@{creation.username}
@@ -169,6 +181,18 @@
 											View Image
 										</a>
 									</p>
+								{/if}
+								{#if bloatPatterns.length > 0}
+									<div class="mt-2">
+										<span class="font-medium text-white/80">Bloat Patterns ({bloatPatterns.length}):</span>
+										<div class="mt-1 space-y-1">
+											{#each bloatPatterns as pattern}
+												<code class="block rounded bg-white/5 px-2 py-1 text-xs text-green-400">
+													{pattern}
+												</code>
+											{/each}
+										</div>
+									</div>
 								{/if}
 							</div>
 
@@ -231,9 +255,8 @@
 	{:else}
 		<div class="space-y-4">
 			{#each data.pendingEdits as edit}
-				<div
-					class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10"
-				>
+				{@const bloatPatterns = parseBloats(edit.bloats)}
+				<div class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10">
 					<div class="flex items-start justify-between">
 						<div class="flex-1">
 							<div class="mb-2 flex items-center gap-3">
@@ -278,8 +301,20 @@
 								{#if edit.channelId}
 									<p>
 										<span class="font-medium text-white/80">Editing Channel ID:</span>
-										{edit.channelId}
+										<code class="rounded bg-white/5 px-1 font-mono text-xs">{edit.channelId}</code>
 									</p>
+								{/if}
+								{#if bloatPatterns.length > 0}
+									<div class="mt-2">
+										<span class="font-medium text-white/80">Bloat Patterns ({bloatPatterns.length}):</span>
+										<div class="mt-1 space-y-1">
+											{#each bloatPatterns as pattern}
+												<code class="block rounded bg-white/5 px-2 py-1 text-xs text-green-400">
+													{pattern}
+												</code>
+											{/each}
+										</div>
+									</div>
 								{/if}
 							</div>
 
