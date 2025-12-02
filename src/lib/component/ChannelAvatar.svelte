@@ -4,7 +4,7 @@
 	import IconImageOff from '~icons/fluent/image-off-24-regular';
 
 	interface Props {
-		username: string;
+		username: string | null;
 		alt: string;
 		size?: 'md' | 'lg';
 		priority?: boolean;
@@ -30,7 +30,7 @@
 	
 	// Clean username and construct Telegram avatar URL
 	// Using 160px for all sizes to maximize browser caching
-	const cleanUsername = $derived(username.replace('@', ''));
+	const cleanUsername = $derived(username?.replace('@', ''));
 	const avatarUrl = $derived(`https://t.me/i/userpic/160/${cleanUsername}.jpg`);
 </script>
 
