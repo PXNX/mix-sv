@@ -7,7 +7,6 @@
 	import FluentInfo24Regular from '~icons/fluent/info-24-regular';
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
-	import FileUpload from '$lib/component/FileUpload.svelte';
 	import { channelSchema } from './schema.js';
 
 	let { data } = $props();
