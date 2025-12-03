@@ -1,4 +1,4 @@
-<!-- src/lib/components/ChannelAvatar.svelte -->
+<!-- src/lib/component/ChannelAvatar.svelte -->
 <script lang="ts">
 	import IconChannel from '~icons/fluent/channel-24-regular';
 	import IconImageOff from '~icons/fluent/image-off-24-regular';
