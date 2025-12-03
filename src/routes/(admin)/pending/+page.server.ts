@@ -4,7 +4,7 @@ import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
 import { pendingEdits, pendingCreations, sources, users, bloats, files } from '$lib/server/schema';
 import { eq, and } from 'drizzle-orm';
-import { deleteFileFromStorage } from '$lib/server/backblaze';
+import { deleteFileFromStorage, getSignedDownloadUrl } from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -20,7 +20,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					edit: pendingEdits,
 					source: sources,
 					user: users,
-					editAvatarFile: files
+					editAvatarFile: files,
+					sourceAvatarFile: files
 				})
 				.from(pendingEdits)
 				.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
@@ -33,7 +34,8 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 					edit: pendingEdits,
 					source: sources,
 					user: users,
-					editAvatarFile: files
+					editAvatarFile: files,
+					sourceAvatarFile: files
 				})
 				.from(pendingEdits)
 				.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
@@ -69,9 +71,40 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 				)
 				.orderBy(pendingCreations.createdAt);
 
+	// Generate signed URLs for edit avatars
+	const editsWithAvatars = await Promise.all(
+		edits.map(async (item) => {
+			// Get avatar URL for the source's current avatar
+			const sourceAvatarUrl = item.source.avatar
+				? await db
+						.select()
+						.from(files)
+						.where(eq(files.id, item.source.avatar))
+						.limit(1)
+						.then(async ([file]) => (file ? await getSignedDownloadUrl(file.key) : null))
+				: null;
+
+			return {
+				...item,
+				sourceAvatarUrl,
+				editAvatarUrl: item.editAvatarFile
+					? await getSignedDownloadUrl(item.editAvatarFile.key)
+					: null
+			};
+		})
+	);
+
+	// Generate signed URLs for creation avatars
+	const creationsWithAvatars = await Promise.all(
+		creations.map(async (item) => ({
+			...item,
+			avatarUrl: item.avatarFile ? await getSignedDownloadUrl(item.avatarFile.key) : null
+		}))
+	);
+
 	return {
-		pendingEdits: edits,
-		pendingCreations: creations,
+		pendingEdits: editsWithAvatars,
+		pendingCreations: creationsWithAvatars,
 		isAdmin
 	};
 };

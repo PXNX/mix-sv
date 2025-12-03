@@ -8,9 +8,8 @@
 	import FluentClock24Regular from '~icons/fluent/clock-24-regular';
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import FluentEdit24Regular from '~icons/fluent/edit-24-regular';
-	import ChannelAvatar from '$lib/components/ChannelAvatar.svelte';
+	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
 	import type { PageData, ActionData } from './$types';
-	import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
 	interface Props {
 		data: PageData;
@@ -67,14 +66,7 @@
 		}
 	}
 
-	async function getAvatarUrl(fileId: string | null): Promise<string | null> {
-		if (!fileId) return null;
-		try {
-			return await getSignedDownloadUrl(fileId);
-		} catch {
-			return null;
-		}
-	}
+	
 </script>
 
 <svelte:head>
@@ -149,19 +141,19 @@
 		</div>
 	{:else}
 		<div class="space-y-4">
-			{#each data.pendingCreations as { creation, avatarFile }}
+			{#each data.pendingCreations as { creation }}
 				{@const bloatPatterns = parseBloats(creation.bloats)}
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10">
 					<div class="flex items-start gap-4">
-						{#if creation.avatar && avatarFile}
-							{#await getAvatarUrl(avatarFile.id) then avatarUrl}
+						{#if creation.avatar && creation.avatarUrl}
+						
 								<ChannelAvatar
 									username={creation.username}
 									alt={creation.channelName}
-									avatarUrl={avatarUrl}
+									avatarUrl={creation.avatarUrl}
 									size="lg"
 								/>
-							{/await}
+						
 						{:else}
 							<ChannelAvatar
 								username={creation.username}
@@ -274,14 +266,14 @@
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10">
 					<div class="flex items-start gap-4">
 						{#if edit.avatar && avatarFile}
-							{#await getAvatarUrl(avatarFile.id) then avatarUrl}
+						
 								<ChannelAvatar
 									username={edit.username}
 									alt={edit.channelName || 'Channel'}
-									avatarUrl={avatarUrl}
+									avatarUrl={edit.avatarurl}
 									size="lg"
 								/>
-							{/await}
+							
 						{:else if edit.username}
 							<ChannelAvatar
 								username={edit.username}

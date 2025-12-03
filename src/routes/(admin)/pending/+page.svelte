@@ -4,7 +4,6 @@
 	import FluentEmojiCheckMark from '~icons/fluent-emoji/check-mark';
 	import FluentEmojiCrossMark from '~icons/fluent-emoji/cross-mark';
 	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
-	import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
 	let { data } = $props();
 
@@ -35,16 +34,12 @@
 		}
 	}
 
-	async function getAvatarUrl(fileId: string | null): Promise<string | null> {
-		if (!fileId) return null;
-		try {
-			return await getSignedDownloadUrl(fileId);
-		} catch {
-			return null;
-		}
-	}
-
-	function getChanges(edit: any, source: any, editAvatarFile: any): DiffField[] {
+	function getChanges(
+		edit: any,
+		source: any,
+		sourceAvatarUrl: string | null,
+		editAvatarUrl: string | null
+	): DiffField[] {
 		const fields: DiffField[] = [
 			{
 				label: 'Channel Name',
@@ -80,8 +75,8 @@
 		if (edit.avatar !== null) {
 			fields.push({
 				label: 'Avatar',
-				oldValue: source.avatar,
-				newValue: editAvatarFile,
+				oldValue: { url: sourceAvatarUrl, username: source.username, name: source.channelName },
+				newValue: { url: editAvatarUrl, username: edit.username || source.username, name: edit.channelName || source.channelName },
 				hasChanged: edit.avatar !== source.avatar,
 				type: 'avatar'
 			});
@@ -91,7 +86,7 @@
 		if (edit.bloats !== null) {
 			const newBloats = parseBloats(edit.bloats);
 			const oldBloats: string[] = []; // We'd need to fetch existing bloats, for now show as new
-			
+
 			fields.push({
 				label: 'Bloat Patterns',
 				oldValue: oldBloats,
@@ -116,8 +111,8 @@
 		</p>
 	{:else}
 		<div class="space-y-6">
-			{#each data.pendingEdits as { edit, source, user, editAvatarFile }}
-				{@const changes = getChanges(edit, source, editAvatarFile)}
+			{#each data.pendingEdits as { edit, source, user, sourceAvatarUrl, editAvatarUrl }}
+				{@const changes = getChanges(edit, source, sourceAvatarUrl, editAvatarUrl)}
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 backdrop-blur-sm">
 					<div class="mb-4 flex items-start justify-between">
 						<div>
@@ -146,35 +141,35 @@
 						{#each changes as change}
 							<div class="rounded-lg border border-white/10 bg-black/20 p-4">
 								<h4 class="mb-3 font-semibold text-white">{change.label}</h4>
-								
+
 								{#if change.type === 'avatar'}
 									<div class="space-y-2">
-										<div class="flex items-center gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2">
+										<div
+											class="flex items-center gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2"
+										>
 											<span class="font-mono text-xs text-red-400">−</span>
-											{#if change.oldValue}
-												{#await getAvatarUrl(change.oldValue) then avatarUrl}
-													<ChannelAvatar
-														username={source.username}
-														alt={source.channelName}
-														avatarUrl={avatarUrl}
-														size="md"
-													/>
-												{/await}
+											{#if change.oldValue.url}
+												<ChannelAvatar
+													username={change.oldValue.username}
+													alt={change.oldValue.name}
+													avatarUrl={change.oldValue.url}
+													size="md"
+												/>
 											{:else}
 												<span class="text-sm text-red-200">No avatar</span>
 											{/if}
 										</div>
-										<div class="flex items-center gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2">
+										<div
+											class="flex items-center gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2"
+										>
 											<span class="font-mono text-xs text-green-400">+</span>
-											{#if change.newValue}
-												{#await getAvatarUrl(change.newValue.id) then avatarUrl}
-													<ChannelAvatar
-														username={edit.username || source.username}
-														alt={edit.channelName || source.channelName}
-														avatarUrl={avatarUrl}
-														size="md"
-													/>
-												{/await}
+											{#if change.newValue.url}
+												<ChannelAvatar
+													username={change.newValue.username}
+													alt={change.newValue.name}
+													avatarUrl={change.newValue.url}
+													size="md"
+												/>
 											{:else}
 												<span class="text-sm text-green-200">No avatar</span>
 											{/if}
@@ -209,11 +204,15 @@
 									</div>
 								{:else}
 									<div class="space-y-2">
-										<div class="flex items-start gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2">
+										<div
+											class="flex items-start gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2"
+										>
 											<span class="font-mono text-xs text-red-400">−</span>
 											<span class="flex-1 text-sm text-red-200">{formatValue(change.oldValue)}</span>
 										</div>
-										<div class="flex items-start gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2">
+										<div
+											class="flex items-start gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2"
+										>
 											<span class="font-mono text-xs text-green-400">+</span>
 											<span class="flex-1 text-sm text-green-200">{formatValue(change.newValue)}</span>
 										</div>
