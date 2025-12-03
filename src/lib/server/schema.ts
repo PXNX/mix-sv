@@ -72,7 +72,9 @@ export const files = pgTable('files', {
 // Pending edits table
 export const pendingEdits = pgTable('pending_edits', {
 	id: serial('id').primaryKey(),
-	channelId: integer('channel_id').references(() => sources.channelId, { onDelete: 'cascade' }),
+	channelId: bigint('channel_id', { mode: 'number' }).references(() => sources.channelId, {
+		onDelete: 'cascade'
+	}),
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
@@ -95,7 +97,7 @@ export const pendingCreations = pgTable('pending_creations', {
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
-	channelId: integer('channel_id'),
+	channelId: bigint('channel_id', { mode: 'number' }),
 	channelName: text('channel_name').notNull(),
 	username: text('username').notNull(),
 	bias: text('bias').notNull(),

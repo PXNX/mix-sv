@@ -21,14 +21,5 @@
 	"lang": "en",
 	"name": "NewsMix Sources",
 	"short_name": "NM Sources",
-	"description": "Search Telegram news channels",
-	"share_target": {
-		"action": "/share-message",
-		"method": "GET",
-		"params": {
-			"title": "title",
-			"text": "text",
-			"url": "url"
-		}
-	}
+	"description": "Search Telegram news channels"
 }
