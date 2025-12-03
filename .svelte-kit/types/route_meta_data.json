@@ -15,6 +15,9 @@
 	"/(authorized)/api/avatar/[key]": [
 		"src/routes/(authorized)/api/avatar/[key]/+server.ts"
 	],
+	"/(public)/api/favorites": [
+		"src/routes/(public)/api/favorites/+server.ts"
+	],
 	"/(public)/auth/callback/google": [
 		"src/routes/(public)/auth/callback/google/+server.ts"
 	],
