@@ -12,6 +12,9 @@
 		"src/routes/(public)/about/+page.server.ts",
 		"src/routes/(public)/+layout.server.ts"
 	],
+	"/(authorized)/api/avatar/[key]": [
+		"src/routes/(authorized)/api/avatar/[key]/+server.ts"
+	],
 	"/(public)/auth/callback/google": [
 		"src/routes/(public)/auth/callback/google/+server.ts"
 	],

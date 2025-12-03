@@ -14,8 +14,6 @@
 	let { data }: Props = $props();
 	const { channel } = data;
 
-	let imageLoaded = $state(false);
-
 	const BIAS_MAP: Record<string, string> = {
 		'🇺🇦': 'Ukraine',
 		'🇷🇺': 'Russia',
@@ -29,11 +27,7 @@
 	}
 
 	function editChannel() {
-		goto(`/channel/${channel.channel_id}/edit`);
-	}
-
-	function handleImageLoad() {
-		imageLoaded = true;
+		goto(`/channel/${channel.channelId}/edit`);
 	}
 
 	function getBiasLabel(biasValue: string): string {
@@ -42,8 +36,8 @@
 </script>
 
 <svelte:head>
-	<title>{channel.channel_name} - Channel Details</title>
-	<meta name="description" content="Details for {channel.channel_name} Telegram channel" />
+	<title>{channel.channelName} - Channel Details</title>
+	<meta name="description" content="Details for {channel.channelName} Telegram channel" />
 	<meta name="view-transition" content="same-origin" />
 </svelte:head>
 
@@ -69,19 +63,21 @@
 <!-- Channel Header Card -->
 <div
 	class="mb-8 rounded-lg border border-white/20 bg-white/5 p-8"
-	style="view-transition-name: channel-{channel.channel_id}"
+	style="view-transition-name: channel-{channel.channelId}"
 >
 	<div class="flex flex-col items-center gap-6 text-center">
-<ChannelAvatar 
-	username={channel.username} 
-	alt={channel.channel_name}
-	size="lg"
-/>
+		<ChannelAvatar 
+			username={channel.username} 
+			avatarUrl={channel.avatar}
+			alt={channel.channelName}
+			size="lg"
+			priority={true}
+		/>
 
 		<!-- Channel Info -->
 		<div class="space-y-3">
 			<h1 class="text-3xl font-bold text-white">
-				{channel.channel_name}
+				{channel.channelName}
 			</h1>
 			<div class="flex flex-col items-center gap-2">
 				{#if channel.username}

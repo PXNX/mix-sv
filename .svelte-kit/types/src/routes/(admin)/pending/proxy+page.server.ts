@@ -22,7 +22,7 @@ export const load = async ({ locals, url }: Parameters<PageServerLoad>[0]) => {
 					user: users
 				})
 				.from(pendingEdits)
-				.innerJoin(sources, eq(pendingEdits.channelId, sources.channel_id))
+				.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
 				.innerJoin(users, eq(pendingEdits.userId, users.id))
 				.where(eq(pendingEdits.status, 'pending'))
 				.orderBy(pendingEdits.createdAt)
@@ -33,7 +33,7 @@ export const load = async ({ locals, url }: Parameters<PageServerLoad>[0]) => {
 					user: users
 				})
 				.from(pendingEdits)
-				.innerJoin(sources, eq(pendingEdits.channelId, sources.channel_id))
+				.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
 				.innerJoin(users, eq(pendingEdits.userId, users.id))
 				.where(and(eq(pendingEdits.userId, locals.user.id), eq(pendingEdits.status, 'pending')))
 				.orderBy(pendingEdits.createdAt);
@@ -92,7 +92,7 @@ export const actions = {
 			if (edit[0].avatar !== null) updateData.avatar = edit[0].avatar;
 
 			// Apply the edit to the source
-			await db.update(sources).set(updateData).where(eq(sources.channel_id, edit[0].channelId!));
+			await db.update(sources).set(updateData).where(eq(sources.channelId, edit[0].channelId!));
 
 			// Handle bloats if present
 			if (edit[0].bloats) {
@@ -100,13 +100,13 @@ export const actions = {
 					const bloatPatterns: string[] = JSON.parse(edit[0].bloats);
 
 					// Delete existing bloats for this channel
-					await db.delete(bloats).where(eq(bloats.channel_id, edit[0].channelId!));
+					await db.delete(bloats).where(eq(bloats.channelId, edit[0].channelId!));
 
 					// Insert new bloats if any
 					if (bloatPatterns.length > 0) {
 						await db.insert(bloats).values(
 							bloatPatterns.map((pattern) => ({
-								channel_id: edit[0].channelId!,
+								channelId: edit[0].channelId!,
 								pattern
 							}))
 						);
@@ -199,8 +199,8 @@ export const actions = {
 		try {
 			// Create the new source
 			await db.insert(sources).values({
-				channel_id: creation[0].channelId!,
-				channel_name: creation[0].channelName,
+				channelId: creation[0].channelId!,
+				channelName: creation[0].channelName,
 				username: creation[0].username,
 				bias: creation[0].bias,
 				invite: creation[0].invite,
@@ -216,7 +216,7 @@ export const actions = {
 					if (bloatPatterns.length > 0) {
 						await db.insert(bloats).values(
 							bloatPatterns.map((pattern) => ({
-								channel_id: creation[0].channelId!,
+								channelId: creation[0].channelId!,
 								pattern
 							}))
 						);

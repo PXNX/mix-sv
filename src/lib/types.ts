@@ -1,6 +1,6 @@
 export interface Channel {
-	channel_id: number;
-	channel_name: string;
+	channelId: number;
+	channelName: string;
 	username: string;
 	bias: string;
 	avatar?: string;
