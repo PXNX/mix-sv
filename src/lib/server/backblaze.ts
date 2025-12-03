@@ -1,5 +1,10 @@
 // src/lib/server/backblaze.ts
-import { S3Client, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import {
+	S3Client,
+	PutObjectCommand,
+	GetObjectCommand,
+	DeleteObjectCommand
+} from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 import { randomUUID } from 'crypto';
@@ -10,6 +15,9 @@ import {
 	BACKBLAZE_REGION,
 	BACKBLAZE_ENDPOINT
 } from '$env/static/private';
+import { db } from './db';
+import { files } from './schema';
+import { eq } from 'drizzle-orm/sql';
 
 const s3Client = new S3Client({
 	endpoint: BACKBLAZE_ENDPOINT,
@@ -236,4 +244,26 @@ export async function getSignedDownloadUrlShort(key: string): Promise<string> {
 	});
 
 	return await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+}
+
+export async function deleteFileFromStorage(fileId: string) {
+	try {
+		// Get file info
+		const [file] = await db.select().from(files).where(eq(files.id, fileId)).limit(1);
+
+		if (!file) return;
+
+		// Delete from B2
+		const deleteCommand = new DeleteObjectCommand({
+			Bucket: BACKBLAZE_BUCKET_NAME,
+			Key: file.key
+		});
+		await s3Client.send(deleteCommand);
+
+		// Delete from database
+		await db.delete(files).where(eq(files.id, fileId));
+	} catch (error) {
+		console.error('Error deleting file:', error);
+		// Don't throw - we still want the operation to succeed even if file deletion fails
+	}
 }

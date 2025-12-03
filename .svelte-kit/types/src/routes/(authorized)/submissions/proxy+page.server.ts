@@ -1,23 +1,32 @@
 // @ts-nocheck
 // src/routes/submissions/+page.server.ts
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import { eq, and } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
-import { pendingCreations, pendingEdits } from '$lib/server/schema';
+import { pendingCreations, pendingEdits, files } from '$lib/server/schema';
+import { deleteFileFromStorage } from '$lib/server/backblaze';
 
 export const load = async ({ locals }: Parameters<PageServerLoad>[0]) => {
-	// Fetch user's pending creations
+	// Fetch user's pending creations with avatar files
 	const userCreations = await db
-		.select()
+		.select({
+			creation: pendingCreations,
+			avatarFile: files
+		})
 		.from(pendingCreations)
+		.leftJoin(files, eq(pendingCreations.avatar, files.id))
 		.where(eq(pendingCreations.userId, locals.user.id))
 		.orderBy(pendingCreations.createdAt);
 
-	// Fetch user's pending edits
+	// Fetch user's pending edits with avatar files
 	const userEdits = await db
-		.select()
+		.select({
+			edit: pendingEdits,
+			avatarFile: files
+		})
 		.from(pendingEdits)
+		.leftJoin(files, eq(pendingEdits.avatar, files.id))
 		.where(eq(pendingEdits.userId, locals.user.id))
 		.orderBy(pendingEdits.createdAt);
 
@@ -30,7 +39,6 @@ export const load = async ({ locals }: Parameters<PageServerLoad>[0]) => {
 
 export const actions = {
 	deleteCreation: async ({ request, locals }: import('./$types').RequestEvent) => {
-		// Check authentication
 		if (!locals.user) {
 			return fail(401, {
 				error: 'You must be logged in to delete submissions'
@@ -76,6 +84,11 @@ export const actions = {
 				});
 			}
 
+			// Delete avatar file if present
+			if (submission.avatar) {
+				await deleteFileFromStorage(submission.avatar);
+			}
+
 			// Delete the submission
 			await db.delete(pendingCreations).where(eq(pendingCreations.id, submissionId));
 
@@ -92,7 +105,6 @@ export const actions = {
 	},
 
 	deleteEdit: async ({ request, locals }: import('./$types').RequestEvent) => {
-		// Check authentication
 		if (!locals.user) {
 			return fail(401, {
 				error: 'You must be logged in to delete submissions'
@@ -134,6 +146,11 @@ export const actions = {
 				return fail(400, {
 					error: 'Only pending edits can be deleted'
 				});
+			}
+
+			// Delete avatar file if present
+			if (edit.avatar) {
+				await deleteFileFromStorage(edit.avatar);
 			}
 
 			// Delete the edit
