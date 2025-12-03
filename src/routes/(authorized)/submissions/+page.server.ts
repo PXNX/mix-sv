@@ -4,7 +4,7 @@ import { eq, and } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { pendingCreations, pendingEdits, files } from '$lib/server/schema';
-import { deleteFileFromStorage } from '$lib/server/backblaze';
+import { deleteFileFromStorage, getSignedDownloadUrl } from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Fetch user's pending creations with avatar files
@@ -29,10 +29,25 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.where(eq(pendingEdits.userId, locals.user.id))
 		.orderBy(pendingEdits.createdAt);
 
+	// Generate signed URLs for avatar files
+	const creationsWithAvatars = await Promise.all(
+		userCreations.map(async (item) => ({
+			...item.creation,
+			avatarUrl: item.avatarFile ? await getSignedDownloadUrl(item.avatarFile.key) : null
+		}))
+	);
+
+	const editsWithAvatars = await Promise.all(
+		userEdits.map(async (item) => ({
+			...item.edit,
+			avatarUrl: item.avatarFile ? await getSignedDownloadUrl(item.avatarFile.key) : null
+		}))
+	);
+
 	return {
 		user: locals.user,
-		pendingCreations: userCreations,
-		pendingEdits: userEdits
+		pendingCreations: creationsWithAvatars,
+		pendingEdits: editsWithAvatars
 	};
 };
 
@@ -54,7 +69,6 @@ export const actions: Actions = {
 		}
 
 		const submissionId = parseInt(id.toString(), 10);
-
 		if (isNaN(submissionId)) {
 			return fail(400, {
 				error: 'Invalid submission ID'
@@ -120,7 +134,6 @@ export const actions: Actions = {
 		}
 
 		const editId = parseInt(id.toString(), 10);
-
 		if (isNaN(editId)) {
 			return fail(400, {
 				error: 'Invalid edit ID'
