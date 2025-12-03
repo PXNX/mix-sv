@@ -3,7 +3,7 @@
 	import { enhance } from '$app/forms';
 	import FluentEmojiCheckMark from '~icons/fluent-emoji/check-mark';
 	import FluentEmojiCrossMark from '~icons/fluent-emoji/cross-mark';
-	import ChannelAvatar from '$lib/components/ChannelAvatar.svelte';
+	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
 	import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
 	let { data } = $props();
