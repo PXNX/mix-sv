@@ -7,6 +7,7 @@
 	import FluentHeart24Regular from '~icons/fluent/heart-24-regular';
 	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
 	import { favoritesStore } from '$lib/stores/favorites.svelte';
+	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
 
 	import type { PageData } from './$types';
 	import type { Channel } from '$lib/types';
@@ -19,7 +20,6 @@
 	
 	let channels = $state<Channel[]>([]);
 	let loading = $state(true);
-	let imageLoadedStates = $state<Record<string, boolean>>({});
 
 	const BIAS_MAP: Record<string, string> = {
 		'🇺🇦': 'Ukraine',
@@ -35,6 +35,7 @@
 
 	async function loadFavorites() {
 		loading = true;
+		favoritesStore.initialize();
 		const favoriteIds = favoritesStore.ids;
 		
 		if (favoriteIds.length === 0) {
@@ -44,9 +45,9 @@
 		}
 
 		try {
-			const response = await fetch(`/favorites?ids=${favoriteIds.join(',')}`);
+			const response = await fetch(`/api/favorites?ids=${favoriteIds.join(',')}`);
 			const result = await response.json();
-			channels = result.channels || data.channels || [];
+			channels = result.channels || [];
 		} catch (error) {
 			console.error('Failed to load favorites:', error);
 			channels = [];
@@ -59,14 +60,6 @@
 		goto('/');
 	}
 
-	function removeFavorite(channelId: number) {
-		favoritesStore.toggle(channelId);
-		channels = channels.filter(c => c.channel_id !== channelId);
-	}
-
-	function handleImageLoad(channelId: string) {
-		imageLoadedStates[channelId] = true;
-	}
 
 	function getBiasLabel(biasValue: string): string {
 		return BIAS_MAP[biasValue] || biasValue;
@@ -108,34 +101,25 @@
 <!-- Favorites List -->
 {#if !loading}
 	<div class="space-y-3">
-		{#each channels as channel (channel.channel_id)}
-			<div
-				class="group flex items-center gap-4 rounded-lg border border-white/20 bg-white/5 p-4 transition-colors"
-			>
+		{#each channels as channel (channel.channelId)}
+			<div class="group relative rounded-lg border border-white/20 bg-white/5 transition-colors hover:border-white/40 hover:bg-white/10">
 				<a
-					href={`/channel/${channel.channel_id}`}
-					class="flex flex-1 items-center gap-4"
+					href={`/channel/${channel.channelId}`}
+					class="block p-4"
 				>
-					<!-- Avatar -->
-					<div class="relative shrink-0">
-						{#if !imageLoadedStates[channel.channel_id]}
-							<div class="size-16 animate-pulse rounded-full bg-white/10"></div>
-						{/if}
-						<img
-							src={channel.avatar}
-							alt={channel.channel_name}
-							class="size-16 rounded-full object-cover {!imageLoadedStates[channel.channel_id]
-								? 'absolute inset-0 opacity-0'
-								: ''}"
-							loading="lazy"
-							onload={() => handleImageLoad(channel.channel_id)}
+					<div class="flex items-center gap-4">
+						<!-- Avatar -->
+						<ChannelAvatar 
+							username={channel.username} 
+							avatarUrl={channel.avatar}
+							alt={channel.channelName}
+							size="md"
 						/>
-					</div>
 
 					<!-- Channel Info -->
 					<div class="min-w-0 flex-1">
 						<h3 class="truncate font-semibold text-white">
-							{channel.channel_name}
+							{channel.channelName}
 						</h3>
 						<div class="flex items-center gap-2">
 							{#if channel.username}
@@ -158,16 +142,11 @@
 							class="size-5 text-white/40 transition-transform group-hover:translate-x-1"
 						/>
 					</div>
-				</a>
-
-				<!-- Remove Button -->
-				<button
-					onclick={() => removeFavorite(channel.channel_id)}
-					class="shrink-0 rounded-lg border border-red-500/20 bg-red-500/10 p-2 text-red-400 transition-colors hover:border-red-500/40 hover:bg-red-500/20"
-					title="Remove from favorites"
-				>
-					<FluentDelete24Regular class="size-5" />
-				</button>
+				</div>
+			</a>
+			
+		
+			
 			</div>
 		{/each}
 

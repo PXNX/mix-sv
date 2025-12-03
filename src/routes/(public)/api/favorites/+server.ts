@@ -1,18 +1,16 @@
-// @ts-nocheck
-// src/routes/favorites/+page.server.ts
-import type { PageServerLoad } from './$types';
+// src/routes/api/favorites/+server.ts
+import { json } from '@sveltejs/kit';
+import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { sources, files } from '$lib/server/schema';
 import { inArray, eq } from 'drizzle-orm';
 import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
-export const load = async ({ url }: Parameters<PageServerLoad>[0]) => {
+export const GET: RequestHandler = async ({ url }) => {
 	const idsParam = url.searchParams.get('ids');
 
 	if (!idsParam) {
-		return {
-			channels: []
-		};
+		return json({ channels: [] });
 	}
 
 	try {
@@ -22,12 +20,10 @@ export const load = async ({ url }: Parameters<PageServerLoad>[0]) => {
 			.filter((id: number) => !isNaN(id));
 
 		if (ids.length === 0) {
-			return {
-				channels: []
-			};
+			return json({ channels: [] });
 		}
 
-		// Query with left join to get file keys (matching search page)
+		// Query with left join to get file keys
 		const results = await db
 			.select({
 				channelId: sources.channelId,
@@ -53,7 +49,6 @@ export const load = async ({ url }: Parameters<PageServerLoad>[0]) => {
 						avatarUrl = await getSignedDownloadUrl(channel.avatarKey);
 					} catch (err) {
 						console.error(`Failed to generate avatar URL for channel ${channel.channelId}:`, err);
-						// Continue without avatar if URL generation fails
 					}
 				}
 
@@ -68,13 +63,9 @@ export const load = async ({ url }: Parameters<PageServerLoad>[0]) => {
 			})
 		);
 
-		return {
-			channels: channelsWithAvatars
-		};
+		return json({ channels: channelsWithAvatars });
 	} catch (err) {
 		console.error('Error fetching favorite channels:', err);
-		return {
-			channels: []
-		};
+		return json({ channels: [], error: 'Failed to load favorites' }, { status: 500 });
 	}
 };
