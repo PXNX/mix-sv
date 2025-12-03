@@ -57,7 +57,7 @@ export const actions: Actions = {
 		try {
 			// Check if channel ID already exists
 			const existingChannel = await db.query.sources.findFirst({
-				where: eq(sources.channel_id, channelIdNum)
+				where: eq(sources.channelId, channelIdNum)
 			});
 
 			if (existingChannel) {
@@ -70,8 +70,8 @@ export const actions: Actions = {
 			// If admin, create channel directly
 			if (locals.user.isAdmin) {
 				await db.insert(sources).values({
-					channel_id: channelIdNum,
-					channel_name: channelName,
+					channelId: channelIdNum,
+					channelName: channelName,
 					username: cleanUsername,
 					bias,
 					invite: inviteHash
@@ -81,7 +81,7 @@ export const actions: Actions = {
 				if (bloatPatterns && bloatPatterns.length > 0) {
 					await db.insert(bloats).values(
 						bloatPatterns.map((pattern) => ({
-							channel_id: channelIdNum,
+							channelId: channelIdNum,
 							pattern
 						}))
 					);

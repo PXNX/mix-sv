@@ -37,9 +37,9 @@
 		const fields: DiffField[] = [
 			{
 				label: 'Channel Name',
-				oldValue: source.channel_name,
+				oldValue: source.channelName,
 				newValue: edit.channelName,
-				hasChanged: edit.channelName !== null && edit.channelName !== source.channel_name,
+				hasChanged: edit.channelName !== null && edit.channelName !== source.channelName,
 				type: 'text'
 			},
 			{
@@ -106,7 +106,7 @@
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 backdrop-blur-sm">
 					<div class="mb-4 flex items-start justify-between">
 						<div>
-							<h3 class="text-xl font-semibold text-white">{source.channel_name}</h3>
+							<h3 class="text-xl font-semibold text-white">{source.channelName}</h3>
 							<p class="text-sm text-white/60">
 								{#if data.isAdmin}
 									Submitted by {user.email} on {formatDate(edit.createdAt)}
@@ -122,7 +122,7 @@
 								{changes.length === 1 ? 'change' : 'changes'} proposed
 							</p>
 						</div>
-						<a href="/channel/{source.channel_id}" class="text-blue-400 hover:text-blue-300">
+						<a href="/channel/{source.channelId}" class="text-blue-400 hover:text-blue-300">
 							View Channel
 						</a>
 					</div>

@@ -7,6 +7,7 @@
 	import FluentInfo24Regular from '~icons/fluent/info-24-regular';
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
+	import FluentImage24Regular from '~icons/fluent/image-24-regular';
 	import { channelSchema } from './schema.js';
 
 	let { data } = $props();
@@ -31,6 +32,7 @@
 	let newBloatPattern = $state('');
 	let uploadError = $state('');
 	let avatarFile = $state<File | null>(null);
+	let avatarPreview = $state<string | null>(null);
 
 	// Check if channel is private (no username)
 	const isPrivateChannel = $derived(!$form.username || $form.username.trim() === '');
@@ -50,21 +52,39 @@
 	function handleFileSelect(event: Event) {
 		const target = event.target as HTMLInputElement;
 		const file = target.files?.[0];
+		
 		if (file) {
+			// Validate file size (5MB max)
+			if (file.size > 5 * 1024 * 1024) {
+				uploadError = 'File size must be less than 5MB';
+				return;
+			}
+			
+			// Validate file type
+			if (!file.type.startsWith('image/')) {
+				uploadError = 'File must be an image';
+				return;
+			}
+			
 			avatarFile = file;
+			avatarPreview = URL.createObjectURL(file);
 			uploadError = '';
 		}
 	}
 
 	function clearAvatarFile() {
+		if (avatarPreview) {
+			URL.revokeObjectURL(avatarPreview);
+		}
 		avatarFile = null;
+		avatarPreview = null;
 		const fileInput = document.getElementById('avatar-file') as HTMLInputElement;
 		if (fileInput) fileInput.value = '';
 	}
 
 	// Get the original data to compare against
 	const originalData = {
-		channel_name: data.channel.channel_name,
+		channelName: data.channel.channelName,
 		username: data.channel.username,
 		bias: data.channel.bias,
 		invite: data.channel.invite || '',
@@ -75,11 +95,10 @@
 	// Get pending edit data if it exists
 	const pendingData = data.pendingEdit
 		? {
-				channel_name: data.pendingEdit.channelName || data.channel.channel_name,
+				channel_name: data.pendingEdit.channelName || data.channel.channelName,
 				username: data.pendingEdit.username || data.channel.username,
 				bias: data.pendingEdit.bias || data.channel.bias,
 				invite: data.pendingEdit.invite || '',
-				avatar: data.pendingEdit.avatar || '',
 				bloats: (() => {
 					try {
 						return data.pendingEdit.bloats ? JSON.parse(data.pendingEdit.bloats) : [];
@@ -93,11 +112,10 @@
 	// Check if current form values differ from both original and pending data
 	const hasChanges = $derived(() => {
 		const current = {
-			channel_name: $form.channel_name?.trim() || '',
+			channelName: $form.channelName?.trim() || '',
 			username: $form.username?.trim() || '',
 			bias: $form.bias || '',
 			invite: $form.invite?.trim() || '',
-			avatar: $form.avatar?.trim() || '',
 			bloats: $form.bloats || []
 		};
 
@@ -111,22 +129,24 @@
 
 		// Check if different from original channel data
 		const differentFromOriginal =
-			current.channel_name !== originalData.channel_name ||
+			current.channelName !== originalData.channelName ||
 			current.username !== originalData.username ||
 			current.bias !== originalData.bias ||
 			current.invite !== originalData.invite ||
 			current.avatar !== originalData.avatar ||
-			!arraysEqual(current.bloats, originalData.bloats);
+			!arraysEqual(current.bloats, originalData.bloats) ||
+			avatarFile !== null;
 
 		// If there's pending data, also check if different from pending
 		if (pendingData) {
 			const differentFromPending =
-				current.channel_name !== pendingData.channel_name ||
+				current.channelName !== pendingData.channelName ||
 				current.username !== pendingData.username ||
 				current.bias !== pendingData.bias ||
 				current.invite !== pendingData.invite ||
 				current.avatar !== pendingData.avatar ||
-				!arraysEqual(current.bloats, pendingData.bloats);
+				!arraysEqual(current.bloats, pendingData.bloats) ||
+				avatarFile !== null;
 
 			return differentFromPending;
 		}
@@ -136,14 +156,14 @@
 </script>
 
 <svelte:head>
-	<title>Edit Channel - {data.channel.channel_name}</title>
+	<title>Edit Channel - {data.channel.channelName}</title>
 	<meta name="description" content="Edit channel information" />
 </svelte:head>
 
 <!-- Header -->
 <header class="mb-8">
 	<a
-		href="/channel/{data.channel.channel_id}"
+		href="/channel/{data.channel.channelId}"
 		class="group mb-6 inline-flex items-center gap-2 text-white/60 transition-colors hover:text-white"
 	>
 		<FluentArrowLeft24Regular class="size-5" />
@@ -198,15 +218,15 @@
 			<input
 				id="channel-name"
 				type="text"
-				name="channel_name"
+				name="channelName"
 				placeholder="e.g., BBC News"
 				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-				class:border-red-500={$errors.channel_name}
-				bind:value={$form.channel_name}
+				class:border-red-500={$errors.channelName}
+				bind:value={$form.channelName}
 				disabled={$submitting}
 			/>
-			{#if $errors.channel_name}
-				<p class="mt-1 text-xs text-red-400">{$errors.channel_name}</p>
+			{#if $errors.channelName}
+				<p class="mt-1 text-xs text-red-400">{$errors.channelName}</p>
 			{/if}
 		</div>
 
@@ -216,53 +236,6 @@
 				<label class="mb-2 block text-sm font-medium text-white">
 					Channel Avatar <span class="text-xs text-white/50">(Optional - Private channels only)</span>
 				</label>
-				
-				{#if $form.avatar && !avatarFile}
-					<div class="mb-4 flex items-center gap-4 rounded-lg border border-white/20 bg-white/5 p-4">
-						<div class="h-16 w-16 overflow-hidden rounded-lg">
-							<img 
-								src={$form.avatar.startsWith('http') ? $form.avatar : `https://your-bucket-url.backblazeb2.com/${$form.avatar}`}
-								alt="Current avatar"
-								class="h-full w-full object-cover"
-							/>
-						</div>
-						<div class="flex-1">
-							<p class="text-sm text-white">Current avatar</p>
-							<button
-								type="button"
-								class="mt-1 text-xs text-red-400 hover:text-red-300"
-								onclick={() => ($form.avatar = '')}
-								disabled={$submitting}
-							>
-								Remove avatar
-							</button>
-						</div>
-					</div>
-				{/if}
-
-				{#if avatarFile}
-					<div class="mb-4 flex items-center gap-4 rounded-lg border border-green-500/20 bg-green-500/10 p-4">
-						<div class="h-16 w-16 overflow-hidden rounded-lg">
-							<img 
-								src={URL.createObjectURL(avatarFile)}
-								alt="New avatar preview"
-								class="h-full w-full object-cover"
-							/>
-						</div>
-						<div class="flex-1">
-							<p class="text-sm text-white">{avatarFile.name}</p>
-							<p class="text-xs text-white/60">{Math.round(avatarFile.size / 1024)} KB</p>
-						</div>
-						<button
-							type="button"
-							class="text-white/40 transition-colors hover:text-red-400"
-							onclick={clearAvatarFile}
-							disabled={$submitting}
-						>
-							<FluentDelete24Regular class="size-5" />
-						</button>
-					</div>
-				{/if}
 
 				<div class="relative">
 					<input
@@ -279,28 +252,80 @@
 						onclick={() => document.getElementById('avatar-file')?.click()}
 						disabled={$submitting}
 						class="w-full rounded-lg border-2 border-dashed border-white/20 bg-white/5 px-4 py-8 text-center transition-colors hover:border-white/40 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+						class:border-green-500={avatarPreview}
+						class:bg-green-500-10={avatarPreview}
 					>
-						<div class="flex flex-col items-center gap-2">
-							<div class="rounded-full bg-white/10 p-3">
-								<svg class="h-8 w-8 text-white/60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-								</svg>
+						{#if avatarPreview}
+							<div class="flex items-center justify-center gap-4">
+								<div class="relative size-14 shrink-0 overflow-hidden rounded-lg">
+									<img 
+										src={avatarPreview}
+										alt="Avatar preview"
+										class="h-full w-full object-cover"
+									/>
+								</div>
+								<div class="flex-1 text-left">
+									<p class="text-sm font-medium text-white">{avatarFile?.name}</p>
+									<p class="text-xs text-white/60">
+										{avatarFile ? Math.round(avatarFile.size / 1024) : 0} KB • Will be resized to 56x56px
+									</p>
+								</div>
+								<button
+									type="button"
+									class="flex-shrink-0 text-white/40 transition-colors hover:text-red-400"
+									onclick={(e) => {
+										e.stopPropagation();
+										clearAvatarFile();
+									}}
+									disabled={$submitting}
+								>
+									<FluentDelete24Regular class="size-5" />
+								</button>
 							</div>
-							<div>
-								<p class="text-sm font-medium text-white">
-									{avatarFile ? 'Change avatar' : 'Click to upload avatar'}
-								</p>
-								<p class="mt-1 text-xs text-white/60">
-									PNG, JPG up to 5MB • Will be resized to 96x96px
-								</p>
+						{:else if $form.avatar}
+							<div class="flex items-center justify-center gap-4">
+								<div class="relative size-14 shrink-0 overflow-hidden rounded-lg">
+									<img 
+										src={$form.avatar.startsWith('http') ? $form.avatar : `https://your-bucket-url.backblazeb2.com/${$form.avatar}`}
+										alt="Current avatar"
+										class="h-full w-full object-cover"
+									/>
+								</div>
+								<div class="flex-1 text-left">
+									<p class="text-sm font-medium text-white">Current avatar</p>
+									<p class="text-xs text-white/60">Click to change or remove</p>
+								</div>
+								<button
+									type="button"
+									class="flex-shrink-0 text-white/40 transition-colors hover:text-red-400"
+									onclick={(e) => {
+										e.stopPropagation();
+										$form.avatar = '';
+									}}
+									disabled={$submitting}
+								>
+									<FluentDelete24Regular class="size-5" />
+								</button>
 							</div>
-						</div>
+						{:else}
+							<div class="flex flex-col items-center gap-2">
+								<div class="rounded-full bg-white/10 p-3">
+									<FluentImage24Regular class="size-8 text-white/60" />
+								</div>
+								<div>
+									<p class="text-sm font-medium text-white">Click to upload avatar</p>
+									<p class="mt-1 text-xs text-white/60">
+										PNG, JPG up to 5MB • Will be resized to 56x56px
+									</p>
+								</div>
+							</div>
+						{/if}
 					</button>
 				</div>
 
 				{#if uploadError}
 					<p class="mt-2 text-xs text-red-400">{uploadError}</p>
-				{:else}
+				{:else if !avatarPreview && !$form.avatar}
 					<p class="mt-2 text-xs text-white/50">
 						Avatar uploads are only available for private channels. Image will be uploaded when you submit the form.
 					</p>
@@ -330,7 +355,7 @@
 				bind:value={$form.bias}
 				disabled={$submitting}
 			>
-				<option value="" class="bg-gray-900 text-white">Select a region</option>
+				<option value="" class="bg-gray-900 text-white">Select a Bias</option>
 				{#each BIAS_OPTIONS as option}
 					<option value={option.value} class="bg-gray-900 text-white">
 						{option.flag}
@@ -346,7 +371,7 @@
 		<!-- Username -->
 		<div>
 			<label for="username" class="mb-2 block text-sm font-medium text-white">
-				Username <span class="text-xs text-white/50">(Optional)</span>
+				Username <span class="text-xs text-white/50">(Optional - Either username OR invite required)</span>
 			</label>
 			<input
 				id="username"
@@ -438,7 +463,7 @@
 			</p>
 
 			<!-- Hidden input for form submission -->
-			{#each $form.bloats as pattern, i}
+			{#each $form.bloats as pattern}
 				<input type="hidden" name="bloats" value={pattern} />
 			{/each}
 

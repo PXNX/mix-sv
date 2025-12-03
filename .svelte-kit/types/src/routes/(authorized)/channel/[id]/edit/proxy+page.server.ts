@@ -1,37 +1,33 @@
 // @ts-nocheck
 // src/routes/channel/[id]/edit/+page.server.ts
-import { fail, redirect } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { db } from '$lib/server/db';
-import { sources, pendingEdits, bloats } from '$lib/server/schema';
+import { sources, pendingEdits, bloats, files } from '$lib/server/schema';
 import { eq, and } from 'drizzle-orm';
 import { channelSchema } from './schema';
-import { uploadImageWithPreset, getSignedDownloadUrl } from '$lib/server/backblaze';
+import { uploadImageWithPreset } from '$lib/server/backblaze';
 
 export const load = async ({ params, locals }: Parameters<PageServerLoad>[0]) => {
-	if (!locals.user) {
-		redirect(302, '/login');
-	}
-
 	const channelId = parseInt(params.id);
 	if (isNaN(channelId)) {
-		redirect(302, '/');
+		throw error(404, 'Channel not found');
 	}
 
 	// Get the channel
 	const channel = await db.query.sources.findFirst({
-		where: eq(sources.channel_id, channelId)
+		where: eq(sources.channelId, channelId)
 	});
 
 	if (!channel) {
-		redirect(302, '/');
+		throw error(404, 'Channel not found');
 	}
 
 	// Get existing bloats
 	const existingBloats = await db.query.bloats.findMany({
-		where: eq(bloats.channel_id, channelId)
+		where: eq(bloats.channelId, channelId)
 	});
 
 	const bloatPatterns = existingBloats.map((b) => b.pattern);
@@ -58,7 +54,7 @@ export const load = async ({ params, locals }: Parameters<PageServerLoad>[0]) =>
 	// Use pending edit data if available, otherwise use channel data
 	const formData = pendingEdit
 		? {
-				channel_name: pendingEdit.channelName || channel.channel_name,
+				channelName: pendingEdit.channelName || channel.channelName,
 				username: pendingEdit.username || channel.username,
 				bias: pendingEdit.bias || channel.bias,
 				invite: pendingEdit.invite || channel.invite || '',
@@ -66,7 +62,7 @@ export const load = async ({ params, locals }: Parameters<PageServerLoad>[0]) =>
 				bloats: pendingBloats
 			}
 		: {
-				channel_name: channel.channel_name,
+				channelName: channel.channelName,
 				username: channel.username,
 				bias: channel.bias,
 				invite: channel.invite || '',
@@ -87,38 +83,77 @@ export const load = async ({ params, locals }: Parameters<PageServerLoad>[0]) =>
 
 export const actions = {
 	default: async ({ request, params, locals }: import('./$types').RequestEvent) => {
-		if (!locals.user) {
-			return fail(401, { message: 'Unauthorized' });
-		}
-
 		const channelId = parseInt(params.id);
-		const form = await superValidate(request, valibot(channelSchema));
+		const formData = await request.formData();
+		const form = await superValidate(formData, valibot(channelSchema));
 
 		if (!form.valid) {
 			return fail(400, { form });
 		}
 
 		try {
+			// Handle avatar upload if file is provided
+			let avatarFileId = form.data.avatar || null;
+			const avatarFile = formData.get('avatarFile') as File | null;
+
+			if (avatarFile && avatarFile.size > 0) {
+				try {
+					// Upload with logo preset (96x96px as defined in IMAGE_SIZES)
+					const uploadResult = await uploadImageWithPreset(avatarFile, 'logo');
+
+					if (!uploadResult.success) {
+						return fail(500, {
+							form,
+							message: `Failed to upload avatar: ${uploadResult.error}`
+						});
+					}
+
+					// Save file metadata to database
+					const [fileRecord] = await db
+						.insert(files)
+						.values({
+							id: crypto.randomUUID(),
+							key: uploadResult.key,
+							fileName: avatarFile.name,
+							contentType: avatarFile.type,
+							sizeBytes: avatarFile.size,
+							uploadedBy: locals.user.id
+						})
+						.returning();
+
+					avatarFileId = fileRecord.id;
+				} catch (error) {
+					console.error('Avatar upload failed:', error);
+					return fail(500, {
+						form,
+						message: 'Failed to upload avatar. Please try again.'
+					});
+				}
+			}
+
+			// Clean username (remove @ if present)
+			const cleanUsername = form.data.username?.trim().replace(/^@/, '') || null;
+
 			if (locals.user.isAdmin) {
 				// Admin: Apply changes directly
 				await db
 					.update(sources)
 					.set({
-						channel_name: form.data.channel_name,
-						username: form.data.username,
+						channelName: form.data.channelName,
+						username: cleanUsername,
 						bias: form.data.bias,
 						invite: form.data.invite || null,
-						avatar: form.data.avatar || null
+						avatar: avatarFileId
 					})
-					.where(eq(sources.channel_id, channelId));
+					.where(eq(sources.channelId, channelId));
 
 				// Update bloats - delete all existing and insert new ones
-				await db.delete(bloats).where(eq(bloats.channel_id, channelId));
+				await db.delete(bloats).where(eq(bloats.channelId, channelId));
 
 				if (form.data.bloats && form.data.bloats.length > 0) {
 					await db.insert(bloats).values(
 						form.data.bloats.map((pattern) => ({
-							channel_id: channelId,
+							channelId: channelId,
 							pattern
 						}))
 					);
@@ -140,11 +175,11 @@ export const actions = {
 					await db
 						.update(pendingEdits)
 						.set({
-							channelName: form.data.channel_name,
-							username: form.data.username,
+							channelName: form.data.channelName,
+							username: cleanUsername,
 							bias: form.data.bias,
 							invite: form.data.invite || null,
-							avatar: form.data.avatar || null,
+							avatar: avatarFileId,
 							bloats: bloatsJson,
 							createdAt: new Date()
 						})
@@ -154,18 +189,18 @@ export const actions = {
 					await db.insert(pendingEdits).values({
 						channelId,
 						userId: locals.user.id,
-						channelName: form.data.channel_name,
-						username: form.data.username,
+						channelName: form.data.channelName,
+						username: cleanUsername,
 						bias: form.data.bias,
 						invite: form.data.invite || null,
-						avatar: form.data.avatar || null,
+						avatar: avatarFileId,
 						bloats: bloatsJson,
 						status: 'pending'
 					});
 				}
 			}
 
-			redirect(302, `/channel/${channelId}`);
+			throw redirect(302, `/channel/${channelId}`);
 		} catch (error) {
 			console.error('Error saving channel:', error);
 			return fail(500, { form, message: 'Failed to save changes' });

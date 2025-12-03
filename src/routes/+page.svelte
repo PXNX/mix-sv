@@ -31,7 +31,6 @@
 	let selectedBias = $state('');
 	let searchResults: Channel[] = $state(data.channels || []);
 	let loading = $state(false);
-	let imageLoadedStates = $state<Record<string, boolean>>({});
 	let searchError = $state<string | null>(null);
 	let favoritesCount = $state(0);
 
@@ -71,9 +70,7 @@
 		};
 	}
 
-	function handleImageLoad(channelId: string) {
-		imageLoadedStates[channelId] = true;
-	}
+
 
 	function getBiasLabel(biasValue: string): string {
 		const option = BIAS_OPTIONS.find((opt) => opt.value === biasValue);
@@ -219,23 +216,24 @@
 <!-- Search Results -->
 {#if !loading || searchResults.length > 0}
 	<div class="space-y-3">
-		{#each searchResults as channel (channel.channel_id)}
+		{#each searchResults as channel (channel.channelId)}
 			<a
-				href={`/channel/${channel.channel_id}`}
+				href={`/channel/${channel.channelId}`}
 				class="group block rounded-lg border border-white/20 bg-white/5 p-4 transition-colors hover:border-white/40 hover:bg-white/10"
-				style="view-transition-name: channel-{channel.channel_id}"
+				style="view-transition-name: channel-{channel.channelId}"
 			>
 				<div class="flex items-center gap-4">
 					<ChannelAvatar 
 	username={channel.username} 
-	alt={channel.channel_name}
+	avatarUrl={channel.avatar}
+	alt={channel.channelName}
 	size="md"
 />
 
 					<!-- Channel Info -->
 					<div class="min-w-0 flex-1">
 						<h3 class="truncate font-semibold text-white">
-							{channel.channel_name}
+							{channel.channelName}
 						</h3>
 						<div class="flex items-center gap-2">
 							{#if channel.username}

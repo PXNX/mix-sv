@@ -30,6 +30,11 @@ declare module '$env/static/private' {
 	export const GOOGLE_CLIENT_ID: string;
 	export const GOOGLE_CLIENT_SECRET: string;
 	export const GOOGLE_REDIRECT_URI: string;
+	export const BACKBLAZE_KEY_ID: string;
+	export const BACKBLAZE_APPLICATION_KEY: string;
+	export const BACKBLAZE_BUCKET_NAME: string;
+	export const BACKBLAZE_REGION: string;
+	export const BACKBLAZE_ENDPOINT: string;
 	export const ALLUSERSPROFILE: string;
 	export const APPDATA: string;
 	export const BUN_INSPECT_CONNECT_TO: string;
@@ -96,6 +101,7 @@ declare module '$env/static/private' {
 	export const USERNAME: string;
 	export const USERPROFILE: string;
 	export const VBOX_HWVIRTEX_IGNORE_SVM_IN_USE: string;
+	export const VIPSHOME: string;
 	export const VSCODE_GIT_ASKPASS_EXTRA_ARGS: string;
 	export const VSCODE_GIT_ASKPASS_MAIN: string;
 	export const VSCODE_GIT_ASKPASS_NODE: string;
@@ -137,6 +143,11 @@ declare module '$env/dynamic/private' {
 		GOOGLE_CLIENT_ID: string;
 		GOOGLE_CLIENT_SECRET: string;
 		GOOGLE_REDIRECT_URI: string;
+		BACKBLAZE_KEY_ID: string;
+		BACKBLAZE_APPLICATION_KEY: string;
+		BACKBLAZE_BUCKET_NAME: string;
+		BACKBLAZE_REGION: string;
+		BACKBLAZE_ENDPOINT: string;
 		ALLUSERSPROFILE: string;
 		APPDATA: string;
 		BUN_INSPECT_CONNECT_TO: string;
@@ -203,6 +214,7 @@ declare module '$env/dynamic/private' {
 		USERNAME: string;
 		USERPROFILE: string;
 		VBOX_HWVIRTEX_IGNORE_SVM_IN_USE: string;
+		VIPSHOME: string;
 		VSCODE_GIT_ASKPASS_EXTRA_ARGS: string;
 		VSCODE_GIT_ASKPASS_MAIN: string;
 		VSCODE_GIT_ASKPASS_NODE: string;

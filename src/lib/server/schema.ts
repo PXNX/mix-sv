@@ -14,27 +14,27 @@ import { relations } from 'drizzle-orm';
 
 // Sources table (channels)
 export const sources = pgTable('sources', {
-	channel_id: bigint('channel_id', { mode: 'number' }).primaryKey(),
-	channel_name: text('channel_name').notNull(),
+	channelId: bigint('channel_id', { mode: 'number' }).primaryKey(),
+	channelName: text('channel_name').notNull(),
 	bias: text('bias').notNull(),
 	username: text('username'),
 	invite: text('invite'),
-	avatar: text('avatar')
+	avatar: text('avatar').references(() => files.id, { onDelete: 'set null' })
 });
 
 // Bloats table (regex patterns for filtering)
 export const bloats = pgTable(
 	'bloats',
 	{
-		channel_id: bigint('channel_id', { mode: 'number' })
+		channelId: bigint('channel_id', { mode: 'number' })
 			.notNull()
-			.references(() => sources.channel_id, { onDelete: 'cascade' }),
+			.references(() => sources.channelId, { onDelete: 'cascade' }),
 		pattern: text('pattern').notNull(),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(table) => ({
-		pk: primaryKey({ columns: [table.channel_id, table.pattern] }),
-		channelIdIdx: index('idx_bloats_channel_id').on(table.channel_id)
+		pk: primaryKey({ columns: [table.channelId, table.pattern] }),
+		channelIdIdx: index('idx_bloats_channel_id').on(table.channelId)
 	})
 );
 
@@ -56,10 +56,23 @@ export const sessions = pgTable('sessions', {
 	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull()
 });
 
+// Files uploaded to Backblaze
+export const files = pgTable('files', {
+	id: text('id').primaryKey(),
+	key: text('key').notNull().unique(),
+	fileName: text('file_name').notNull(),
+	contentType: text('content_type').notNull(),
+	sizeBytes: integer('size_bytes').notNull(),
+	uploadedBy: text('uploaded_by')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow()
+});
+
 // Pending edits table
 export const pendingEdits = pgTable('pending_edits', {
 	id: serial('id').primaryKey(),
-	channelId: integer('channel_id').references(() => sources.channel_id, { onDelete: 'cascade' }),
+	channelId: integer('channel_id').references(() => sources.channelId, { onDelete: 'cascade' }),
 	userId: text('user_id')
 		.notNull()
 		.references(() => users.id, { onDelete: 'cascade' }),
@@ -68,7 +81,7 @@ export const pendingEdits = pgTable('pending_edits', {
 	username: text('username'),
 	bias: text('bias'),
 	invite: text('invite'),
-	avatar: text('avatar'),
+	avatar: text('avatar').references(() => files.id, { onDelete: 'set null' }),
 	bloats: text('bloats'), // JSON array of patterns
 	status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -87,7 +100,7 @@ export const pendingCreations = pgTable('pending_creations', {
 	username: text('username').notNull(),
 	bias: text('bias').notNull(),
 	invite: text('invite'),
-	avatar: text('avatar'),
+	avatar: text('avatar').references(() => files.id, { onDelete: 'set null' }),
 	bloats: text('bloats'), // JSON array of patterns
 	status: text('status').notNull().default('pending'),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -96,21 +109,33 @@ export const pendingCreations = pgTable('pending_creations', {
 });
 
 // Relations
-export const sourcesRelations = relations(sources, ({ many }) => ({
-	bloats: many(bloats)
+export const sourcesRelations = relations(sources, ({ many, one }) => ({
+	bloats: many(bloats),
+	avatarFile: one(files, {
+		fields: [sources.avatar],
+		references: [files.id]
+	})
 }));
 
 export const bloatsRelations = relations(bloats, ({ one }) => ({
 	source: one(sources, {
-		fields: [bloats.channel_id],
-		references: [sources.channel_id]
+		fields: [bloats.channelId],
+		references: [sources.channelId]
 	})
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
 	sessions: many(sessions),
 	pendingEdits: many(pendingEdits),
-	pendingCreations: many(pendingCreations)
+	pendingCreations: many(pendingCreations),
+	uploadedFiles: many(files)
+}));
+
+export const filesRelations = relations(files, ({ one }) => ({
+	uploadedBy: one(users, {
+		fields: [files.uploadedBy],
+		references: [users.id]
+	})
 }));
 
 export const pendingEditsRelations = relations(pendingEdits, ({ one }) => ({
@@ -124,7 +149,11 @@ export const pendingEditsRelations = relations(pendingEdits, ({ one }) => ({
 	}),
 	channel: one(sources, {
 		fields: [pendingEdits.channelId],
-		references: [sources.channel_id]
+		references: [sources.channelId]
+	}),
+	avatarFile: one(files, {
+		fields: [pendingEdits.avatar],
+		references: [files.id]
 	})
 }));
 
@@ -136,6 +165,10 @@ export const pendingCreationsRelations = relations(pendingCreations, ({ one }) =
 	reviewer: one(users, {
 		fields: [pendingCreations.reviewedBy],
 		references: [users.id]
+	}),
+	avatarFile: one(files, {
+		fields: [pendingCreations.avatar],
+		references: [files.id]
 	})
 }));
 
@@ -148,6 +181,8 @@ export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
+export type File = typeof files.$inferSelect;
+export type NewFile = typeof files.$inferInsert;
 export type PendingEdit = typeof pendingEdits.$inferSelect;
 export type NewPendingEdit = typeof pendingEdits.$inferInsert;
 export type PendingCreation = typeof pendingCreations.$inferSelect;
