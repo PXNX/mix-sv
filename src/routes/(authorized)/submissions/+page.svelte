@@ -8,7 +8,9 @@
 	import FluentClock24Regular from '~icons/fluent/clock-24-regular';
 	import FluentAdd24Regular from '~icons/fluent/add-24-regular';
 	import FluentEdit24Regular from '~icons/fluent/edit-24-regular';
+	import ChannelAvatar from '$lib/components/ChannelAvatar.svelte';
 	import type { PageData, ActionData } from './$types';
+	import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
 	interface Props {
 		data: PageData;
@@ -62,6 +64,15 @@
 			return JSON.parse(bloatsJson);
 		} catch {
 			return [];
+		}
+	}
+
+	async function getAvatarUrl(fileId: string | null): Promise<string | null> {
+		if (!fileId) return null;
+		try {
+			return await getSignedDownloadUrl(fileId);
+		} catch {
+			return null;
 		}
 	}
 </script>
@@ -138,10 +149,27 @@
 		</div>
 	{:else}
 		<div class="space-y-4">
-			{#each data.pendingCreations as creation}
+			{#each data.pendingCreations as { creation, avatarFile }}
 				{@const bloatPatterns = parseBloats(creation.bloats)}
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10">
-					<div class="flex items-start justify-between">
+					<div class="flex items-start gap-4">
+						{#if creation.avatar && avatarFile}
+							{#await getAvatarUrl(avatarFile.id) then avatarUrl}
+								<ChannelAvatar
+									username={creation.username}
+									alt={creation.channelName}
+									avatarUrl={avatarUrl}
+									size="lg"
+								/>
+							{/await}
+						{:else}
+							<ChannelAvatar
+								username={creation.username}
+								alt={creation.channelName}
+								size="lg"
+							/>
+						{/if}
+
 						<div class="flex-1">
 							<div class="mb-2 flex items-center gap-3">
 								<h3 class="text-xl font-semibold text-white">{creation.channelName}</h3>
@@ -167,19 +195,6 @@
 									<p>
 										<span class="font-medium text-white/80">Invite:</span>
 										{creation.invite}
-									</p>
-								{/if}
-								{#if creation.avatar}
-									<p>
-										<span class="font-medium text-white/80">Avatar:</span>
-										<a
-											href={creation.avatar}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="link link-primary"
-										>
-											View Image
-										</a>
 									</p>
 								{/if}
 								{#if bloatPatterns.length > 0}
@@ -254,10 +269,27 @@
 		</div>
 	{:else}
 		<div class="space-y-4">
-			{#each data.pendingEdits as edit}
+			{#each data.pendingEdits as { edit, avatarFile }}
 				{@const bloatPatterns = parseBloats(edit.bloats)}
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 transition-colors hover:bg-white/10">
-					<div class="flex items-start justify-between">
+					<div class="flex items-start gap-4">
+						{#if edit.avatar && avatarFile}
+							{#await getAvatarUrl(avatarFile.id) then avatarUrl}
+								<ChannelAvatar
+									username={edit.username}
+									alt={edit.channelName || 'Channel'}
+									avatarUrl={avatarUrl}
+									size="lg"
+								/>
+							{/await}
+						{:else if edit.username}
+							<ChannelAvatar
+								username={edit.username}
+								alt={edit.channelName || 'Channel'}
+								size="lg"
+							/>
+						{/if}
+
 						<div class="flex-1">
 							<div class="mb-2 flex items-center gap-3">
 								<h3 class="text-xl font-semibold text-white">
@@ -283,19 +315,6 @@
 									<p>
 										<span class="font-medium text-white/80">Invite:</span>
 										{edit.invite}
-									</p>
-								{/if}
-								{#if edit.avatar}
-									<p>
-										<span class="font-medium text-white/80">Avatar:</span>
-										<a
-											href={edit.avatar}
-											target="_blank"
-											rel="noopener noreferrer"
-											class="link link-primary"
-										>
-											View Image
-										</a>
 									</p>
 								{/if}
 								{#if edit.channelId}

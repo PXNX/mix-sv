@@ -3,6 +3,8 @@
 	import { enhance } from '$app/forms';
 	import FluentEmojiCheckMark from '~icons/fluent-emoji/check-mark';
 	import FluentEmojiCrossMark from '~icons/fluent-emoji/cross-mark';
+	import ChannelAvatar from '$lib/components/ChannelAvatar.svelte';
+	import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
 	let { data } = $props();
 
@@ -21,7 +23,7 @@
 		oldValue: any;
 		newValue: any;
 		hasChanged: boolean;
-		type?: 'text' | 'array';
+		type?: 'text' | 'array' | 'avatar';
 	}
 
 	function parseBloats(bloatsJson: string | null): string[] {
@@ -33,7 +35,16 @@
 		}
 	}
 
-	function getChanges(edit: any, source: any): DiffField[] {
+	async function getAvatarUrl(fileId: string | null): Promise<string | null> {
+		if (!fileId) return null;
+		try {
+			return await getSignedDownloadUrl(fileId);
+		} catch {
+			return null;
+		}
+	}
+
+	function getChanges(edit: any, source: any, editAvatarFile: any): DiffField[] {
 		const fields: DiffField[] = [
 			{
 				label: 'Channel Name',
@@ -62,15 +73,19 @@
 				newValue: edit.invite,
 				hasChanged: edit.invite !== null && edit.invite !== source.invite,
 				type: 'text'
-			},
-			{
-				label: 'Avatar',
-				oldValue: source.avatar,
-				newValue: edit.avatar,
-				hasChanged: edit.avatar !== null && edit.avatar !== source.avatar,
-				type: 'text'
 			}
 		];
+
+		// Add avatar comparison if present in edit
+		if (edit.avatar !== null) {
+			fields.push({
+				label: 'Avatar',
+				oldValue: source.avatar,
+				newValue: editAvatarFile,
+				hasChanged: edit.avatar !== source.avatar,
+				type: 'avatar'
+			});
+		}
 
 		// Add bloats comparison if present in edit
 		if (edit.bloats !== null) {
@@ -81,7 +96,7 @@
 				label: 'Bloat Patterns',
 				oldValue: oldBloats,
 				newValue: newBloats,
-				hasChanged: true, // Consider changed if bloats field is present
+				hasChanged: true,
 				type: 'array'
 			});
 		}
@@ -101,8 +116,8 @@
 		</p>
 	{:else}
 		<div class="space-y-6">
-			{#each data.pendingEdits as { edit, source, user }}
-				{@const changes = getChanges(edit, source)}
+			{#each data.pendingEdits as { edit, source, user, editAvatarFile }}
+				{@const changes = getChanges(edit, source, editAvatarFile)}
 				<div class="rounded-lg border border-white/20 bg-white/5 p-6 backdrop-blur-sm">
 					<div class="mb-4 flex items-start justify-between">
 						<div>
@@ -132,7 +147,40 @@
 							<div class="rounded-lg border border-white/10 bg-black/20 p-4">
 								<h4 class="mb-3 font-semibold text-white">{change.label}</h4>
 								
-								{#if change.type === 'array'}
+								{#if change.type === 'avatar'}
+									<div class="space-y-2">
+										<div class="flex items-center gap-3 rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2">
+											<span class="font-mono text-xs text-red-400">−</span>
+											{#if change.oldValue}
+												{#await getAvatarUrl(change.oldValue) then avatarUrl}
+													<ChannelAvatar
+														username={source.username}
+														alt={source.channelName}
+														avatarUrl={avatarUrl}
+														size="md"
+													/>
+												{/await}
+											{:else}
+												<span class="text-sm text-red-200">No avatar</span>
+											{/if}
+										</div>
+										<div class="flex items-center gap-3 rounded border-l-4 border-green-500 bg-green-950/40 px-3 py-2">
+											<span class="font-mono text-xs text-green-400">+</span>
+											{#if change.newValue}
+												{#await getAvatarUrl(change.newValue.id) then avatarUrl}
+													<ChannelAvatar
+														username={edit.username || source.username}
+														alt={edit.channelName || source.channelName}
+														avatarUrl={avatarUrl}
+														size="md"
+													/>
+												{/await}
+											{:else}
+												<span class="text-sm text-green-200">No avatar</span>
+											{/if}
+										</div>
+									</div>
+								{:else if change.type === 'array'}
 									<div class="space-y-2">
 										{#if Array.isArray(change.oldValue) && change.oldValue.length > 0}
 											<div class="rounded border-l-4 border-red-500 bg-red-950/40 px-3 py-2">
