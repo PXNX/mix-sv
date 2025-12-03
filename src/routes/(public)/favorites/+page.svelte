@@ -5,7 +5,6 @@
 	import FluentArrowLeft24Regular from '~icons/fluent/arrow-left-24-regular';
 	import FluentArrowRight24Regular from '~icons/fluent/arrow-right-24-regular';
 	import FluentHeart24Regular from '~icons/fluent/heart-24-regular';
-	import FluentDelete24Regular from '~icons/fluent/delete-24-regular';
 	import { favoritesStore } from '$lib/stores/favorites.svelte';
 	import ChannelAvatar from '$lib/component/ChannelAvatar.svelte';
 
@@ -17,7 +16,7 @@
 	}
 
 	let { data }: Props = $props();
-	
+
 	let channels = $state<Channel[]>([]);
 	let loading = $state(true);
 
@@ -37,7 +36,7 @@
 		loading = true;
 		favoritesStore.initialize();
 		const favoriteIds = favoritesStore.ids;
-		
+
 		if (favoriteIds.length === 0) {
 			channels = [];
 			loading = false;
@@ -59,7 +58,6 @@
 	function goBack() {
 		goto('/');
 	}
-
 
 	function getBiasLabel(biasValue: string): string {
 		return BIAS_MAP[biasValue] || biasValue;
@@ -102,51 +100,47 @@
 {#if !loading}
 	<div class="space-y-3">
 		{#each channels as channel (channel.channelId)}
-			<div class="group relative rounded-lg border border-white/20 bg-white/5 transition-colors hover:border-white/40 hover:bg-white/10">
-				<a
-					href={`/channel/${channel.channelId}`}
-					class="block p-4"
-				>
+			<div
+				class="group relative rounded-lg border border-white/20 bg-white/5 transition-colors hover:border-white/40 hover:bg-white/10"
+			>
+				<a href={`/channel/${channel.channelId}`} class="block p-4">
 					<div class="flex items-center gap-4">
 						<!-- Avatar -->
-						<ChannelAvatar 
-							username={channel.username} 
+						<ChannelAvatar
+							username={channel.username}
 							avatarUrl={channel.avatar}
 							alt={channel.channelName}
 							size="md"
 						/>
 
-					<!-- Channel Info -->
-					<div class="min-w-0 flex-1">
-						<h3 class="truncate font-semibold text-white">
-							{channel.channelName}
-						</h3>
-						<div class="flex items-center gap-2">
-							{#if channel.username}
-								<p class="text-sm text-white/60">
-									@{channel.username}
-								</p>
-							{/if}
-							{#if channel.bias}
-								<span class="text-xs text-white/40">•</span>
-								<p class="text-sm text-white/50">
-									{getBiasLabel(channel.bias)}
-								</p>
-							{/if}
+						<!-- Channel Info -->
+						<div class="min-w-0 flex-1">
+							<h3 class="truncate font-semibold text-white">
+								{channel.channelName}
+							</h3>
+							<div class="flex items-center gap-2">
+								{#if channel.username}
+									<p class="text-sm text-white/60">
+										@{channel.username}
+									</p>
+								{/if}
+								{#if channel.bias}
+									<span class="text-xs text-white/40">•</span>
+									<p class="text-sm text-white/50">
+										{getBiasLabel(channel.bias)}
+									</p>
+								{/if}
+							</div>
+						</div>
+
+						<!-- Arrow -->
+						<div class="flex shrink-0 items-center">
+							<FluentArrowRight24Regular
+								class="size-5 text-white/40 transition-transform group-hover:translate-x-1"
+							/>
 						</div>
 					</div>
-
-					<!-- Arrow -->
-					<div class="flex shrink-0 items-center">
-						<FluentArrowRight24Regular
-							class="size-5 text-white/40 transition-transform group-hover:translate-x-1"
-						/>
-					</div>
-				</div>
-			</a>
-			
-		
-			
+				</a>
 			</div>
 		{/each}
 

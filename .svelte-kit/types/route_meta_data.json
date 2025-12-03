@@ -56,6 +56,9 @@
 		"src/routes/(public)/privacy-policy/+page.server.ts",
 		"src/routes/(public)/+layout.server.ts"
 	],
+	"/(authorized)/share-message": [
+		"src/routes/(authorized)/+layout.server.ts"
+	],
 	"/(authorized)/submissions": [
 		"src/routes/(authorized)/submissions/+page.server.ts",
 		"src/routes/(authorized)/+layout.server.ts"

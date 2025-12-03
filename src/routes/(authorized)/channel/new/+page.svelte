@@ -1,5 +1,6 @@
 <!-- src/routes/channel/new/+page.svelte -->
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { superForm } from 'sveltekit-superforms';
 	import { valibotClient } from 'sveltekit-superforms/adapters';
 	import FluentArrowLeft24Regular from '~icons/fluent/arrow-left-24-regular';
@@ -10,6 +11,7 @@
 	import FluentQuestionCircle24Regular from '~icons/fluent/question-circle-24-regular';
 	import { channelSchema } from './schema';
 	import type { PageData } from './$types';
+	import { page } from '$app/state';
 
 	let { data }: { data: PageData } = $props();
 
@@ -47,6 +49,24 @@
 
 	let newBloatPattern = $state('');
 
+	// Handle URL parameters from share target
+	onMount(() => {
+		const urlParams = page.url.searchParams;
+		const channelId = urlParams.get('channelId');
+		const username = urlParams.get('username');
+		const channelName = urlParams.get('channelName');
+
+		if (channelId) {
+			$form.channelId = channelId;
+		}
+		if (username) {
+			$form.username = username;
+		}
+		if (channelName) {
+			$form.channelName = channelName;
+		}
+	});
+
 	function addBloat() {
 		const pattern = newBloatPattern.trim();
 		if (pattern && !$form.bloats.includes(pattern)) {
@@ -63,7 +83,6 @@
 		const link = channelLinkInput.trim();
 		if (!link) return;
 
-		// Try to extract channel ID from various formats
 		// Format 1: https://t.me/c/1234567890/123 (private channel with message)
 		let match = link.match(/t\.me\/c\/(\d+)/);
 		if (match) {
@@ -88,7 +107,17 @@
 			return;
 		}
 
-		alert('Could not extract channel ID from the provided link. Please try copying a message link from the channel.');
+		// Format 4: Public channel username - https://t.me/username
+		match = link.match(/t\.me\/([a-zA-Z0-9_]+)/);
+		if (match && match[1] !== 'c') {
+			$form.username = match[1];
+			channelLinkInput = '';
+			return;
+		}
+
+		alert(
+			'Could not extract channel ID from the provided link. Please try copying a message link from the channel.'
+		);
 	}
 </script>
 
@@ -117,7 +146,9 @@
 
 <!-- Success Message -->
 {#if showSuccess && successMessage}
-	<div class="alert alert-success mb-6 border-green-500/20 bg-green-500/10 animate-in fade-in slide-in-from-top-2 duration-300">
+	<div
+		class="alert alert-success animate-in fade-in slide-in-from-top-2 mb-6 border-green-500/20 bg-green-500/10 duration-300"
+	>
 		<FluentCheckmark24Regular class="size-6 text-green-400" />
 		<div>
 			<h3 class="font-semibold text-green-400">Success!</h3>
@@ -128,7 +159,7 @@
 
 <!-- Loading Overlay -->
 {#if $submitting}
-	<div class="alert mb-6 border-blue-500/20 bg-blue-500/10 animate-pulse">
+	<div class="alert mb-6 animate-pulse border-blue-500/20 bg-blue-500/10">
 		<span class="loading loading-spinner loading-md text-blue-400"></span>
 		<div>
 			<h3 class="font-semibold text-blue-400">Processing...</h3>
@@ -144,8 +175,8 @@
 	<div class="alert mb-6 border-blue-500/20 bg-blue-500/10">
 		<FluentInfo24Regular class="size-6 text-blue-400" />
 		<div class="text-sm text-blue-300/80">
-			<strong class="text-blue-400">Note:</strong> Your submission will be reviewed by an admin
-			before being added to the channel list. Please ensure all information is accurate.
+			<strong class="text-blue-400">Note:</strong> Your submission will be reviewed by an admin before
+			being added to the channel list. Please ensure all information is accurate.
 		</div>
 	</div>
 {/if}
@@ -179,7 +210,9 @@
 						<li>4. Paste the link below to extract the channel ID</li>
 					</ol>
 					<p class="mb-3 text-xs text-blue-400/70">
-						The link will look like: <code class="rounded bg-blue-500/10 px-1">https://t.me/c/1234567890/123</code>
+						The link will look like: <code class="rounded bg-blue-500/10 px-1"
+							>https://t.me/c/1234567890/123</code
+						>
 					</p>
 
 					<div class="flex gap-2">
@@ -245,8 +278,6 @@
 			{/if}
 		</div>
 
-		
-
 		<!-- Region/Bias -->
 		<div>
 			<label for="bias" class="mb-2 block text-sm font-medium text-white">
@@ -273,71 +304,71 @@
 			{/if}
 		</div>
 
-<div>
-	<label for="username" class="mb-2 block text-sm font-medium text-white">
-		Username <span class="text-xs text-white/50">(Optional)</span>
-	</label>
-	<input
-		id="username"
-		type="text"
-		name="username"
-		placeholder="e.g., bbcnews (without @)"
-		class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-		class:border-red-500={$errors.username}
-		bind:value={$form.username}
-		disabled={$submitting}
-	/>
-	{#if $errors.username}
-		<p class="mt-1 text-xs text-red-400">{$errors.username}</p>
-	{:else}
-		<p class="mt-1 text-xs text-white/50">
-			For public channels only. Leave empty for private channels.
-		</p>
-	{/if}
-</div>
+		<div>
+			<label for="username" class="mb-2 block text-sm font-medium text-white">
+				Username <span class="text-xs text-white/50">(Optional)</span>
+			</label>
+			<input
+				id="username"
+				type="text"
+				name="username"
+				placeholder="e.g., bbcnews (without @)"
+				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+				class:border-red-500={$errors.username}
+				bind:value={$form.username}
+				disabled={$submitting}
+			/>
+			{#if $errors.username}
+				<p class="mt-1 text-xs text-red-400">{$errors.username}</p>
+			{:else}
+				<p class="mt-1 text-xs text-white/50">
+					For public channels only. Leave empty for private channels.
+				</p>
+			{/if}
+		</div>
 
-<!-- Invite Link (Required for Private Channels) -->
-<div>
-	<label for="invite" class="mb-2 flex items-baseline gap-2 text-sm font-medium text-white">
-		<span>Invite Link</span>
-		{#if !$form.username || $form.username.trim() === ''}
-			<span class="text-red-400">*</span>
-			<span class="text-xs font-normal text-yellow-400">(Required for private channels)</span>
-		{/if}
-	</label>
-	<input
-		id="invite"
-		type="text"
-		name="invite"
-		placeholder="e.g., https://t.me/+AbCdEfGhIjK or just the hash"
-		class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-		class:border-red-500={$errors.invite}
-		class:border-yellow-500={!$form.username || $form.username.trim() === ''}
-		bind:value={$form.invite}
-		disabled={$submitting}
-	/>
-	{#if $errors.invite}
-		<p class="mt-1 text-xs text-red-400">{$errors.invite}</p>
-	{:else if !$form.username || $form.username.trim() === ''}
-		<p class="mt-1 text-xs text-yellow-400">
-			⚠️ This field is required when no username is provided (private channel).
-		</p>
-	{:else}
-		<p class="mt-1 text-xs text-white/50">
-			Only needed for private channels. Paste the full invite link or just the hash.
-		</p>
-	{/if}
-</div>
-
-
+		<!-- Invite Link -->
+		<div>
+			<label for="invite" class="mb-2 flex items-baseline gap-2 text-sm font-medium text-white">
+				<span>Invite Link</span>
+				{#if !$form.username || $form.username.trim() === ''}
+					<span class="text-red-400">*</span>
+					<span class="text-xs font-normal text-yellow-400">(Required for private channels)</span>
+				{/if}
+			</label>
+			<input
+				id="invite"
+				type="text"
+				name="invite"
+				placeholder="e.g., https://t.me/+AbCdEfGhIjK or just the hash"
+				class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+				class:border-red-500={$errors.invite}
+				class:border-yellow-500={!$form.username || $form.username.trim() === ''}
+				bind:value={$form.invite}
+				disabled={$submitting}
+			/>
+			{#if $errors.invite}
+				<p class="mt-1 text-xs text-red-400">{$errors.invite}</p>
+			{:else if !$form.username || $form.username.trim() === ''}
+				<p class="mt-1 text-xs text-yellow-400">
+					⚠️ This field is required when no username is provided (private channel).
+				</p>
+			{:else}
+				<p class="mt-1 text-xs text-white/50">
+					Only needed for private channels. Paste the full invite link or just the hash.
+				</p>
+			{/if}
+		</div>
 
 		<!-- Bloats Section -->
 		<div class="border-t border-white/10 pt-6">
 			<label class="mb-3 block text-sm font-medium text-white">
 				Bloat Patterns
-				<span class="ml-2 text-xs font-normal text-white/60">(Optional regex patterns to filter ads/footers)</span>
+				<span class="ml-2 text-xs font-normal text-white/60"
+					>(Optional regex patterns to filter ads/footers)</span
+				>
 			</label>
-			
+
 			<!-- Add new pattern -->
 			<div class="mb-4 flex gap-2">
 				<input
@@ -365,7 +396,8 @@
 			</div>
 
 			<p class="mb-3 text-xs text-white/50">
-				Add regex patterns to automatically remove advertisements or repetitive footers from messages.
+				Add regex patterns to automatically remove advertisements or repetitive footers from
+				messages.
 			</p>
 
 			<!-- Hidden input for form submission -->
@@ -377,8 +409,10 @@
 			{#if $form.bloats.length > 0}
 				<div class="space-y-2">
 					{#each $form.bloats as pattern, index}
-						<div class="group flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3">
-							<code class="flex-1 break-all text-sm text-green-400">{pattern}</code>
+						<div
+							class="group flex items-start gap-3 rounded-lg border border-white/10 bg-white/5 p-3"
+						>
+							<code class="flex-1 text-sm break-all text-green-400">{pattern}</code>
 							<button
 								type="button"
 								class="text-white/40 transition-colors hover:text-red-400 disabled:cursor-not-allowed disabled:opacity-50"
@@ -392,7 +426,9 @@
 					{/each}
 				</div>
 			{:else}
-				<div class="rounded-lg border border-dashed border-white/10 bg-white/5 p-4 text-center text-sm text-white/50">
+				<div
+					class="rounded-lg border border-dashed border-white/10 bg-white/5 p-4 text-center text-sm text-white/50"
+				>
 					No bloat patterns added yet. Add patterns above to filter unwanted content.
 				</div>
 			{/if}
