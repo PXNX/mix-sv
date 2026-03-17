@@ -26,6 +26,8 @@ export {};
 
 
 declare module "$app/types" {
+	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
+
 	export interface AppTypes {
 		RouteId(): "/(public)" | "/(authorized)" | "/(admin)" | "/" | "/(public)/about" | "/(public)/api" | "/(authorized)/api" | "/(authorized)/api/avatar" | "/(authorized)/api/avatar/[key]" | "/(public)/api/favorites" | "/(public)/auth" | "/(public)/auth/callback" | "/(public)/auth/callback/google" | "/(public)/auth/login" | "/(public)/auth/login/google" | "/(public)/auth/logout" | "/channel" | "/(authorized)/channel" | "/(authorized)/channel/new" | "/channel/[id]" | "/(authorized)/channel/[id]" | "/(authorized)/channel/[id]/edit" | "/(public)/contact" | "/(public)/favorites" | "/(admin)/pending" | "/(public)/privacy-policy" | "/(authorized)/submissions" | "/(public)/terms-of-service";
 		RouteParams(): {
@@ -64,7 +66,7 @@ declare module "$app/types" {
 			"/(authorized)/submissions": Record<string, never>;
 			"/(public)/terms-of-service": Record<string, never>
 		};
-		Pathname(): "/" | "/about" | "/about/" | "/api" | "/api/" | "/api/avatar" | "/api/avatar/" | `/api/avatar/${string}` & {} | `/api/avatar/${string}/` & {} | "/api/favorites" | "/api/favorites/" | "/auth" | "/auth/" | "/auth/callback" | "/auth/callback/" | "/auth/callback/google" | "/auth/callback/google/" | "/auth/login" | "/auth/login/" | "/auth/login/google" | "/auth/login/google/" | "/auth/logout" | "/auth/logout/" | "/channel" | "/channel/" | "/channel/new" | "/channel/new/" | `/channel/${string}` & {} | `/channel/${string}/` & {} | `/channel/${string}/edit` & {} | `/channel/${string}/edit/` & {} | "/contact" | "/contact/" | "/favorites" | "/favorites/" | "/pending" | "/pending/" | "/privacy-policy" | "/privacy-policy/" | "/submissions" | "/submissions/" | "/terms-of-service" | "/terms-of-service/";
+		Pathname(): "/" | "/about" | `/api/avatar/${string}` & {} | "/api/favorites" | "/auth/callback/google" | "/auth/login" | "/auth/login/google" | "/auth/logout" | "/channel/new" | `/channel/${string}` & {} | `/channel/${string}/edit` & {} | "/contact" | "/favorites" | "/pending" | "/privacy-policy" | "/submissions" | "/terms-of-service";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/favicon.png" | "/fonts/HPSimplified.ttf" | "/icon-512.png" | "/manifest.json" | string & {};
 	}
