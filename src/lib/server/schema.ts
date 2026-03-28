@@ -41,7 +41,9 @@ export const bloats = pgTable(
 // Users table
 export const users = pgTable('users', {
 	id: text('id').primaryKey(),
-	email: text('email').notNull().unique(),
+	email: text('email').unique(), // Made optional for Telegram users
+	telegramId: bigint('telegram_id', { mode: 'number' }).unique(),
+	username: text('username'),
 	picture: text('picture'),
 	isAdmin: boolean('is_admin').notNull().default(false),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()

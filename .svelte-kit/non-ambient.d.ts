@@ -29,7 +29,7 @@ declare module "$app/types" {
 	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
 
 	export interface AppTypes {
-		RouteId(): "/(public)" | "/(authorized)" | "/(admin)" | "/" | "/(public)/about" | "/(public)/api" | "/(authorized)/api" | "/(authorized)/api/avatar" | "/(authorized)/api/avatar/[key]" | "/(public)/api/favorites" | "/(public)/auth" | "/(public)/auth/callback" | "/(public)/auth/callback/google" | "/(public)/auth/login" | "/(public)/auth/login/google" | "/(public)/auth/logout" | "/channel" | "/(authorized)/channel" | "/(authorized)/channel/new" | "/channel/[id]" | "/(authorized)/channel/[id]" | "/(authorized)/channel/[id]/edit" | "/(public)/contact" | "/(public)/favorites" | "/(admin)/pending" | "/(public)/privacy-policy" | "/(authorized)/submissions" | "/(public)/terms-of-service";
+		RouteId(): "/(public)" | "/(authorized)" | "/(admin)" | "/" | "/(public)/about" | "/(public)/api" | "/(authorized)/api" | "/(authorized)/api/avatar" | "/(authorized)/api/avatar/[key]" | "/(public)/api/favorites" | "/(public)/auth" | "/(public)/auth/callback" | "/(public)/auth/callback/google" | "/(public)/auth/callback/telegram" | "/(public)/auth/login" | "/(public)/auth/login/google" | "/(public)/auth/logout" | "/channel" | "/(authorized)/channel" | "/(authorized)/channel/new" | "/channel/[id]" | "/(authorized)/channel/[id]" | "/(authorized)/channel/[id]/edit" | "/(public)/contact" | "/(public)/favorites" | "/(admin)/pending" | "/(public)/privacy-policy" | "/(authorized)/submissions" | "/(public)/terms-of-service";
 		RouteParams(): {
 			"/(authorized)/api/avatar/[key]": { key: string };
 			"/channel/[id]": { id: string };
@@ -50,6 +50,7 @@ declare module "$app/types" {
 			"/(public)/auth": Record<string, never>;
 			"/(public)/auth/callback": Record<string, never>;
 			"/(public)/auth/callback/google": Record<string, never>;
+			"/(public)/auth/callback/telegram": Record<string, never>;
 			"/(public)/auth/login": Record<string, never>;
 			"/(public)/auth/login/google": Record<string, never>;
 			"/(public)/auth/logout": Record<string, never>;
@@ -66,7 +67,7 @@ declare module "$app/types" {
 			"/(authorized)/submissions": Record<string, never>;
 			"/(public)/terms-of-service": Record<string, never>
 		};
-		Pathname(): "/" | "/about" | `/api/avatar/${string}` & {} | "/api/favorites" | "/auth/callback/google" | "/auth/login" | "/auth/login/google" | "/auth/logout" | "/channel/new" | `/channel/${string}` & {} | `/channel/${string}/edit` & {} | "/contact" | "/favorites" | "/pending" | "/privacy-policy" | "/submissions" | "/terms-of-service";
+		Pathname(): "/" | "/about" | `/api/avatar/${string}` & {} | "/api/favorites" | "/auth/callback/google" | "/auth/callback/telegram" | "/auth/login" | "/auth/login/google" | "/auth/logout" | "/channel/new" | `/channel/${string}` & {} | `/channel/${string}/edit` & {} | "/contact" | "/favorites" | "/pending" | "/privacy-policy" | "/submissions" | "/terms-of-service";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/favicon.png" | "/fonts/HPSimplified.ttf" | "/icon-512.png" | "/manifest.json" | string & {};
 	}
