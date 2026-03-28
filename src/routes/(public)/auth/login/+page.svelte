@@ -31,6 +31,13 @@
 			Continue with Google
 		</a>
 
+		<script async src="https://telegram.org/js/telegram-widget.js?23" data-telegram-login="nyx_news_bot" data-size="large" data-onauth="onTelegramAuth(user)" data-request-access="write"></script>
+<script type="text/javascript">
+  function onTelegramAuth(user) {
+    alert('Logged in as ' + user.first_name + ' ' + user.last_name + ' (' + user.id + (user.username ? ', @' + user.username : '') + ')');
+  }
+</script>
+
 		<div class="text-center text-xs text-white/60">
 			By signing in, you agree to our
 			<a class="link link-primary" href="/terms-of-service">Terms of Service</a>
