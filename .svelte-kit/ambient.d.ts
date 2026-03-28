@@ -57,8 +57,6 @@ declare module '$env/static/private' {
 	export const DokanLibrary1_LibraryPath_x86: string;
 	export const DriverData: string;
 	export const flutter: string;
-	export const FPS_BROWSER_APP_PROFILE_STRING: string;
-	export const FPS_BROWSER_USER_PROFILE_STRING: string;
 	export const GIT_ASKPASS: string;
 	export const GIT_SSH: string;
 	export const GRADLE_HOME: string;
@@ -122,7 +120,6 @@ declare module '$env/static/private' {
 	export const windir: string;
 	export const WSLENV: string;
 	export const ZES_ENABLE_SYSMAN: string;
-	export const __COMPAT_LAYER: string;
 }
 
 /**
@@ -228,8 +225,6 @@ declare module '$env/dynamic/private' {
 		DokanLibrary1_LibraryPath_x86: string;
 		DriverData: string;
 		flutter: string;
-		FPS_BROWSER_APP_PROFILE_STRING: string;
-		FPS_BROWSER_USER_PROFILE_STRING: string;
 		GIT_ASKPASS: string;
 		GIT_SSH: string;
 		GRADLE_HOME: string;
@@ -293,7 +288,6 @@ declare module '$env/dynamic/private' {
 		windir: string;
 		WSLENV: string;
 		ZES_ENABLE_SYSMAN: string;
-		__COMPAT_LAYER: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}

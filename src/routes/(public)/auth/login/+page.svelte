@@ -54,15 +54,15 @@
 			}
 		</script>
 
+		with Callback:
 		<script
 			async
 			src="https://telegram.org/js/telegram-widget.js?23"
 			data-telegram-login="nyx_news_bot"
-			data-size="large"
+			data-size="medium"
 			data-auth-url="/auth/login/telegram?next=%2F&quot;"
 			data-request-access="write"
 		>
- with Callback
 		</script>
 
 		<div class="text-center text-xs text-white/60">
