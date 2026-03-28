@@ -21,6 +21,9 @@
 	"/(public)/auth/callback/google": [
 		"src/routes/(public)/auth/callback/google/+server.ts"
 	],
+	"/(public)/auth/callback/telegram": [
+		"src/routes/(public)/auth/callback/telegram/+server.ts"
+	],
 	"/(public)/auth/login": [
 		"src/routes/(public)/+layout.server.ts"
 	],
