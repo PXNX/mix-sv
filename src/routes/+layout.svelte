@@ -1,7 +1,16 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import CookieBanner from '$lib/component/CookieBanner.svelte';
 	import '../app.css';
+	import { readyTelegramWebApp, expandTelegramWebApp } from '$lib/utils/telegram';
+
 	let { children } = $props();
+
+	onMount(() => {
+		// Initialize Telegram Web App
+		readyTelegramWebApp();
+		expandTelegramWebApp();
+	});
 </script>
 
 <div
