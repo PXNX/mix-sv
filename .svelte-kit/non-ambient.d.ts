@@ -38,13 +38,13 @@ declare module "$app/types" {
 		};
 		LayoutParams(): {
 			"/(public)": Record<string, never>;
-			"/(authorized)": { key?: string; id?: string };
+			"/(authorized)": { key?: string | undefined; id?: string | undefined };
 			"/(admin)": Record<string, never>;
-			"/": { key?: string; id?: string };
+			"/": { key?: string | undefined; id?: string | undefined };
 			"/(public)/about": Record<string, never>;
 			"/(public)/api": Record<string, never>;
-			"/(authorized)/api": { key?: string };
-			"/(authorized)/api/avatar": { key?: string };
+			"/(authorized)/api": { key?: string | undefined };
+			"/(authorized)/api/avatar": { key?: string | undefined };
 			"/(authorized)/api/avatar/[key]": { key: string };
 			"/(public)/api/favorites": Record<string, never>;
 			"/(public)/auth": Record<string, never>;
@@ -54,8 +54,8 @@ declare module "$app/types" {
 			"/(public)/auth/login": Record<string, never>;
 			"/(public)/auth/login/google": Record<string, never>;
 			"/(public)/auth/logout": Record<string, never>;
-			"/channel": { id?: string };
-			"/(authorized)/channel": { id?: string };
+			"/channel": { id?: string | undefined };
+			"/(authorized)/channel": { id?: string | undefined };
 			"/(authorized)/channel/new": Record<string, never>;
 			"/channel/[id]": { id: string };
 			"/(authorized)/channel/[id]": { id: string };
