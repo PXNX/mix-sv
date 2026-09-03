@@ -16,7 +16,11 @@ const config = {
 		// adapter-auto only supports some environments, see https://kit.svelte.dev/docs/adapter-auto for a list.
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 		// See https://kit.svelte.dev/docs/adapters for more information about adapters.
-		adapter: adapter()
+		// Bun runtime (rather than the default Node.js one) so that Bun.Image
+		// (used for avatar processing, see lib/server/backblaze.ts) is actually
+		// available at runtime, not just in local `bun run dev`. Experimental on
+		// both Vercel's and adapter-vercel's side as of writing.
+		adapter: adapter({ runtime: 'experimental_bun1.x' })
 	}
 };
 

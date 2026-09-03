@@ -6,7 +6,6 @@ import {
 	DeleteObjectCommand
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import sharp from 'sharp';
 import { randomUUID } from 'crypto';
 import {
 	BACKBLAZE_KEY_ID,
@@ -38,14 +37,17 @@ export interface UploadResult {
 export interface ImageDimensions {
 	width: number;
 	height: number;
-	fit?: 'cover' | 'contain' | 'fill' | 'inside' | 'outside';
+	// Bun.Image only supports these two (no cover/contain/outside like sharp had).
+	// 'inside' fits within the box preserving aspect ratio; the actual square/cover
+	// crop is done client-side instead (see ChannelAvatar.svelte's object-cover).
+	fit?: 'fill' | 'inside';
 	quality?: number; // JPEG quality (1-100)
 }
 
 // Predefined image sizes
 export const IMAGE_SIZES = {
-	logo: { width: 96, height: 96, fit: 'cover' as const, quality: 90 },
-	locationImage: { width: 420, height: 256, fit: 'cover' as const, quality: 85 }
+	logo: { width: 96, height: 96, fit: 'inside' as const, quality: 90 },
+	locationImage: { width: 420, height: 256, fit: 'inside' as const, quality: 85 }
 } as const;
 
 /**
@@ -54,30 +56,25 @@ export const IMAGE_SIZES = {
  * @param dimensions - Target dimensions and options
  * @returns Processed image buffer
  */
-async function processImage(buffer: Buffer, dimensions: ImageDimensions): Promise<Buffer> {
-	const { width, height, fit = 'cover', quality = 85 } = dimensions;
+async function processImage(
+	buffer: Buffer,
+	dimensions: ImageDimensions
+): Promise<{ buffer: Buffer; contentType: string }> {
+	const { width, height, fit = 'inside', quality = 85 } = dimensions;
 
-	let sharpInstance = sharp(buffer).resize(width, height, {
-		fit,
-		position: 'center',
-		withoutEnlargement: false
-	});
+	// Requires the Bun runtime (see svelte.config.js's adapter runtime option) -
+	// this global doesn't exist under Node.js.
+	const { format } = await new Bun.Image(buffer).metadata();
+	const resized = new Bun.Image(buffer).resize(width, height, { fit });
 
-	// Auto-detect format and optimize
-	const metadata = await sharp(buffer).metadata();
+	// PNGs keep their format (preserves transparency); everything else becomes JPEG.
+	const isPng = format === 'png';
+	const encoded = isPng ? resized.png({ compressionLevel: 9 }) : resized.jpeg({ quality });
 
-	if (metadata.format === 'png' && !metadata.hasAlpha) {
-		// Convert PNG without transparency to JPEG for smaller size
-		sharpInstance = sharpInstance.jpeg({ quality, progressive: true });
-	} else if (metadata.format === 'png') {
-		// Keep PNG with transparency, but optimize
-		sharpInstance = sharpInstance.png({ compressionLevel: 9, progressive: true });
-	} else {
-		// Default to JPEG
-		sharpInstance = sharpInstance.jpeg({ quality, progressive: true });
-	}
-
-	return await sharpInstance.toBuffer();
+	return {
+		buffer: Buffer.from(await encoded.buffer()),
+		contentType: isPng ? 'image/png' : 'image/jpeg'
+	};
 }
 
 /**
@@ -101,10 +98,9 @@ export async function uploadFile(
 		// Process image if dimensions provided and file is an image
 		if (dimensions && contentType.startsWith('image/')) {
 			try {
-				processedBuffer = await processImage(buffer, dimensions);
-				// Update content type based on processed image
-				const metadata = await sharp(processedBuffer).metadata();
-				finalContentType = `image/${metadata.format}`;
+				const processed = await processImage(buffer, dimensions);
+				processedBuffer = processed.buffer;
+				finalContentType = processed.contentType;
 			} catch (error) {
 				console.error('Image processing failed, using original:', error);
 				// Continue with original buffer if processing fails

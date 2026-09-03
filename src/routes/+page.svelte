@@ -2,6 +2,7 @@
 <script lang="ts">
 	import type { Channel } from '$lib/types';
 	import { enhance } from '$app/forms';
+	import { navigating } from '$app/state';
 	import { onMount } from 'svelte';
 	import SimpleIconsTelegram from '~icons/simple-icons/telegram';
 	import FluentArrowRight24Regular from '~icons/fluent/arrow-right-24-regular';
@@ -217,6 +218,7 @@
 {#if !loading || searchResults.length > 0}
 	<div class="space-y-3">
 		{#each searchResults as channel (channel.channelId)}
+			{@const isNavigating = navigating.to?.url.pathname === `/channel/${channel.channelId}`}
 			<a
 				href={`/channel/${channel.channelId}`}
 				class="group block rounded-lg border border-white/20 bg-white/5 p-4 transition-colors hover:border-white/40 hover:bg-white/10"
@@ -250,11 +252,15 @@
 						</div>
 					</div>
 
-					<!-- Arrow -->
+					<!-- Arrow / loading spinner while navigating to this channel -->
 					<div class="flex shrink-0 items-center">
-						<FluentArrowRight24Regular
-							class="size-5 text-white/40 transition-transform group-hover:translate-x-1"
-						/>
+						{#if isNavigating}
+							<span class="loading loading-spinner loading-sm text-white/60"></span>
+						{:else}
+							<FluentArrowRight24Regular
+								class="size-5 text-white/40 transition-transform group-hover:translate-x-1"
+							/>
+						{/if}
 					</div>
 				</div>
 			</a>

@@ -11,6 +11,6 @@ export default defineConfig({
 	out: './drizzle/ptb_nn',
 	dialect: 'postgresql',
 	dbCredentials: {
-		url: process.env.DATABASE_URL || 'postgresql://localhost:5432/trainstation'
+		url: process.env.PTB_NN_DATABASE_URL || 'postgresql://localhost:5432/trainstation'
 	}
 });

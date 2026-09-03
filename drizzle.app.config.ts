@@ -11,6 +11,6 @@ export default defineConfig({
 	out: './drizzle/app',
 	dialect: 'postgresql',
 	dbCredentials: {
-		url: process.env.APP_DATABASE_URL || 'postgresql://localhost:5432/mix_sv'
+		url: process.env.DATABASE_URL || 'postgresql://localhost:5432/mix_sv'
 	}
 });
