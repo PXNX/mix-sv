@@ -1,59 +1,42 @@
 // src/routes/+page.server.ts
 import type { PageServerLoad, Actions } from './$types';
 import { db } from '$lib/server/db';
-import { sources, files } from '$lib/server/schema';
+import { sources } from '$lib/server/schema';
 import { ilike, eq, and } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import type { SQL } from 'drizzle-orm';
-import { getSignedDownloadUrl } from '$lib/server/backblaze';
+import { getAvatarUrlsByChannelIds } from '$lib/server/backblaze';
 
 async function getChannelsWithAvatars(conditions: SQL[]) {
-	// Query with left join to get file keys
+	// sources lives in ptb_nn; avatars are tracked separately in mix-sv's own
+	// database (see channelAvatars in app-schema.ts), so resolve them after.
 	let query = db
 		.select({
 			channelId: sources.channelId,
 			channelName: sources.channelName,
+			displayName: sources.displayName,
 			username: sources.username,
 			bias: sources.bias,
-			invite: sources.invite,
-			avatarFileId: sources.avatar,
-			avatarKey: files.key
+			invite: sources.invite
 		})
-		.from(sources)
-		.leftJoin(files, eq(sources.avatar, files.id));
+		.from(sources);
 
 	if (conditions.length > 0) {
 		query = query.where(and(...conditions));
 	}
 
 	const results = await query.orderBy(sources.channelName);
+	const avatarUrls = await getAvatarUrlsByChannelIds(results.map((r) => r.channelId));
 
-	// Generate signed URLs for avatars
-	const channelsWithAvatars = await Promise.all(
-		results.map(async (channel) => {
-			let avatarUrl: string | null = null;
-
-			if (channel.avatarKey) {
-				try {
-					avatarUrl = await getSignedDownloadUrl(channel.avatarKey);
-				} catch (err) {
-					console.error(`Failed to generate avatar URL for channel ${channel.channelId}:`, err);
-					// Continue without avatar if URL generation fails
-				}
-			}
-
-			return {
-				channelId: channel.channelId,
-				channelName: channel.channelName,
-				username: channel.username,
-				bias: channel.bias,
-				invite: channel.invite,
-				avatar: avatarUrl
-			};
-		})
-	);
-
-	return channelsWithAvatars;
+	return results.map((channel) => ({
+		channelId: channel.channelId,
+		channelName: channel.channelName,
+		displayName: channel.displayName || channel.channelName,
+		username: channel.username,
+		bias: channel.bias,
+		invite: channel.invite,
+		avatar: avatarUrls.get(channel.channelId) ?? null
+	}));
 }
 
 export const load: PageServerLoad = async ({ url, locals }) => {

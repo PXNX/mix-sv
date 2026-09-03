@@ -1,9 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
-import { db } from '$lib/server/db';
-import { users } from '$lib/server/schema';
 import { createSession, generateSessionToken } from '$lib/server/auth';
+import { syncTelegramUser } from '$lib/server/telegram-auth';
 import { TELEGRAM_BOT_TOKEN } from '$env/static/private';
-import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 
 export const GET = async ({ url, cookies }) => {
@@ -21,7 +19,7 @@ export const GET = async ({ url, cookies }) => {
 		throw error(400, 'Missing required fields');
 	}
 
-	// Verify Telegram Hash
+	// Verify Telegram Hash (Login Widget scheme: secret = SHA256(bot_token))
 	const checkString = Object.keys(data)
 		.filter((key) => key !== 'hash' && data[key as keyof typeof data])
 		.sort()
@@ -42,32 +40,10 @@ export const GET = async ({ url, cookies }) => {
 	}
 
 	const telegramId = parseInt(data.id);
-	const result = await db
-		.select()
-		.from(users)
-		.where(eq(users.telegramId, telegramId));
-
-	let user = result[0];
-
-	if (!user) {
-		const userId = crypto.randomUUID();
-		await db.insert(users).values({
-			id: userId,
-			telegramId: telegramId,
-			username: data.username || `${data.first_name}${data.last_name ? ' ' + data.last_name : ''}`,
-			picture: data.photo_url,
-			isAdmin: false
-		});
-		const newResult = await db
-			.select()
-			.from(users)
-			.where(eq(users.id, userId));
-		user = newResult[0];
-	}
-
-	if (!user) {
-		throw error(500, 'Failed to create user');
-	}
+	const user = await syncTelegramUser(telegramId, {
+		username: data.username || `${data.first_name}${data.last_name ? ' ' + data.last_name : ''}`,
+		picture: data.photo_url
+	});
 
 	const sessionToken = generateSessionToken();
 	const session = await createSession(sessionToken, user.id);

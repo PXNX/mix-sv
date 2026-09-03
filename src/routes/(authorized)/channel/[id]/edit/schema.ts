@@ -15,7 +15,14 @@ export const channelSchema = v.pipe(
 		bias: v.pipe(v.string(), v.minLength(1, 'Bias is required')),
 		invite: v.optional(v.pipe(v.string(), v.trim()), ''),
 		avatar: v.optional(v.pipe(v.string(), v.trim()), ''),
-		bloats: v.optional(v.array(v.pipe(v.string(), v.trim(), v.minLength(1))), [])
+		bloats: v.optional(v.array(v.pipe(v.string(), v.trim(), v.minLength(1))), []),
+		// Admin-only fields (ignored server-side unless the requester is an admin)
+		displayName: v.optional(v.pipe(v.string(), v.trim()), ''),
+		description: v.optional(v.pipe(v.string(), v.trim()), ''),
+		rating: v.optional(v.pipe(v.string(), v.trim()), ''),
+		destination: v.optional(v.pipe(v.string(), v.trim()), ''),
+		isActive: v.optional(v.boolean(), false),
+		isSpread: v.optional(v.boolean(), true)
 	}),
 	v.check((data) => {
 		if (!data.username || data.username.trim() === '') {

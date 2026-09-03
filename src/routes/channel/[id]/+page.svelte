@@ -109,7 +109,7 @@
         <!-- Channel Info -->
         <div class="space-y-3">
             <h1 class="text-3xl font-bold text-white">
-                {channel.channelName}
+                {channel.displayName}
             </h1>
             <div class="flex flex-col items-center gap-2">
                 {#if channel.username}
@@ -123,10 +123,41 @@
                         <span class="text-sm font-medium">{getBiasLabel(channel.bias)}</span>
                     </div>
                 {/if}
+                {#if channel.description}
+                    <p class="max-w-md text-sm text-white/60">{channel.description}</p>
+                {/if}
             </div>
         </div>
     </div>
 </div>
+
+{#if data.isAdmin}
+    <div class="mb-8 rounded-lg border border-white/20 bg-white/5 p-6">
+        <h2 class="mb-4 text-sm font-semibold tracking-wide text-white/60 uppercase">Admin Info</h2>
+        <dl class="grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
+            <div>
+                <dt class="text-white/50">Rating</dt>
+                <dd class="text-white">{channel.rating ?? '—'}</dd>
+            </div>
+            <div>
+                <dt class="text-white/50">Active</dt>
+                <dd class="text-white">{channel.isActive ? 'Yes' : 'No'}</dd>
+            </div>
+            <div>
+                <dt class="text-white/50">Spread</dt>
+                <dd class="text-white">{channel.isSpread ? 'Yes' : 'No'}</dd>
+            </div>
+            <div>
+                <dt class="text-white/50">Destination</dt>
+                <dd class="text-white">{channel.destinationName ?? '—'}</dd>
+            </div>
+            <div>
+                <dt class="text-white/50">Posting Account</dt>
+                <dd class="text-white">{channel.accountName ?? '—'}</dd>
+            </div>
+        </dl>
+    </div>
+{/if}
 
 <!-- Action Buttons -->
 <div class="space-y-3">

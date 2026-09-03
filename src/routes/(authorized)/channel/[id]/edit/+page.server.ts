@@ -3,11 +3,12 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { db } from '$lib/server/db';
-import { sources, pendingEdits, bloats, files } from '$lib/server/schema';
+import { db, appDb } from '$lib/server/db';
+import { sources, bloats, destinations, accounts } from '$lib/server/schema';
+import { pendingEdits, files, channelAvatars } from '$lib/server/app-schema';
 import { eq, and } from 'drizzle-orm';
 import { channelSchema } from './schema';
-import { uploadImageWithPreset } from '$lib/server/backblaze';
+import { uploadImageWithPreset, setChannelAvatar } from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const channelId = parseInt(params.id);
@@ -31,8 +32,16 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const bloatPatterns = existingBloats.map((b) => b.pattern);
 
+	// Current avatar is tracked in mix-sv's own database, not on `sources` itself
+	const [currentAvatar] = await appDb
+		.select()
+		.from(channelAvatars)
+		.where(eq(channelAvatars.channelId, channelId))
+		.limit(1);
+	const currentAvatarFileId = currentAvatar?.fileId ?? '';
+
 	// Check for pending edits by this user
-	const pendingEdit = await db.query.pendingEdits.findFirst({
+	const pendingEdit = await appDb.query.pendingEdits.findFirst({
 		where: and(
 			eq(pendingEdits.channelId, channelId),
 			eq(pendingEdits.userId, locals.user.id),
@@ -57,7 +66,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				username: pendingEdit.username || channel.username,
 				bias: pendingEdit.bias || channel.bias,
 				invite: pendingEdit.invite || channel.invite || '',
-				avatar: pendingEdit.avatar || channel.avatar || '',
+				avatar: pendingEdit.avatar || currentAvatarFileId,
 				bloats: pendingBloats
 			}
 		: {
@@ -65,18 +74,35 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				username: channel.username,
 				bias: channel.bias,
 				invite: channel.invite || '',
-				avatar: channel.avatar || '',
-				bloats: bloatPatterns
+				avatar: currentAvatarFileId,
+				bloats: bloatPatterns,
+				displayName: channel.displayName || '',
+				description: channel.description || '',
+				rating: channel.rating?.toString() || '',
+				destination: channel.destination?.toString() || '',
+				isActive: channel.isActive ?? false,
+				isSpread: channel.isSpread ?? true
 			};
 
 	const form = await superValidate(formData, valibot(channelSchema));
+
+	// Admin-only reference data. Account attachment is display-only here: only ptb-nn
+	// may add/remove a source's Telegram account, since that's what actually joins/leaves
+	// the channel. mix-sv just shows which account is currently attached.
+	const isAdmin = locals.user.isAdmin;
+	const destinationOptions = isAdmin ? await db.select().from(destinations) : [];
+	const currentAccount = channel.apiId
+		? (await db.select().from(accounts).where(eq(accounts.accountId, channel.apiId)).limit(1))[0]
+		: null;
 
 	return {
 		form,
 		channel,
 		pendingEdit,
-		isAdmin: locals.user.isAdmin,
-		existingBloats: bloatPatterns
+		isAdmin,
+		existingBloats: bloatPatterns,
+		destinationOptions,
+		currentAccount
 	};
 };
 
@@ -108,7 +134,7 @@ export const actions: Actions = {
 					}
 
 					// Save file metadata to database
-					const [fileRecord] = await db
+					const [fileRecord] = await appDb
 						.insert(files)
 						.values({
 							id: crypto.randomUUID(),
@@ -134,7 +160,13 @@ export const actions: Actions = {
 			const cleanUsername = form.data.username?.trim().replace(/^@/, '') || null;
 
 			if (locals.user.isAdmin) {
-				// Admin: Apply changes directly
+				// Admin: Apply changes directly, including the extended/admin-only fields
+				// Note: apiId (the account attached to this source) is intentionally not
+				// writable here - only ptb-nn may attach/detach an account, since that's
+				// what actually joins/leaves the channel with that account's Telegram session.
+				const rating = form.data.rating ? parseInt(form.data.rating, 10) : null;
+				const destination = form.data.destination ? parseInt(form.data.destination, 10) : null;
+
 				await db
 					.update(sources)
 					.set({
@@ -142,9 +174,17 @@ export const actions: Actions = {
 						username: cleanUsername,
 						bias: form.data.bias,
 						invite: form.data.invite || null,
-						avatar: avatarFileId
+						displayName: form.data.displayName || null,
+						description: form.data.description || null,
+						rating: Number.isNaN(rating!) ? null : rating,
+						destination: Number.isNaN(destination!) ? null : destination,
+						isActive: form.data.isActive,
+						isSpread: form.data.isSpread
 					})
 					.where(eq(sources.channelId, channelId));
+
+				// Avatar is tracked in mix-sv's own database, not on `sources` itself
+				await setChannelAvatar(channelId, avatarFileId);
 
 				// Update bloats - delete all existing and insert new ones
 				await db.delete(bloats).where(eq(bloats.channelId, channelId));
@@ -159,7 +199,7 @@ export const actions: Actions = {
 				}
 			} else {
 				// Non-admin: Create or update pending edit
-				const existingPending = await db.query.pendingEdits.findFirst({
+				const existingPending = await appDb.query.pendingEdits.findFirst({
 					where: and(
 						eq(pendingEdits.channelId, channelId),
 						eq(pendingEdits.userId, locals.user.id),
@@ -171,7 +211,7 @@ export const actions: Actions = {
 
 				if (existingPending) {
 					// Update existing pending edit
-					await db
+					await appDb
 						.update(pendingEdits)
 						.set({
 							channelName: form.data.channelName,
@@ -185,7 +225,7 @@ export const actions: Actions = {
 						.where(eq(pendingEdits.id, existingPending.id));
 				} else {
 					// Create new pending edit
-					await db.insert(pendingEdits).values({
+					await appDb.insert(pendingEdits).values({
 						channelId,
 						userId: locals.user.id,
 						channelName: form.data.channelName,

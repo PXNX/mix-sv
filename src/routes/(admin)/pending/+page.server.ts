@@ -1,10 +1,16 @@
 // src/routes/(authorized)/pending/+page.server.ts
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
-import { db } from '$lib/server/db';
-import { pendingEdits, pendingCreations, sources, users, bloats, files } from '$lib/server/schema';
-import { eq, and } from 'drizzle-orm';
-import { deleteFileFromStorage, getSignedDownloadUrl } from '$lib/server/backblaze';
+import { db, appDb } from '$lib/server/db';
+import { sources, bloats } from '$lib/server/schema';
+import { pendingEdits, pendingCreations, users, files } from '$lib/server/app-schema';
+import { eq, and, inArray } from 'drizzle-orm';
+import {
+	deleteFileFromStorage,
+	getAvatarUrlsByFileIds,
+	getAvatarUrlsByChannelIds,
+	setChannelAvatar
+} from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ locals, url }) => {
 	if (!locals.user) {
@@ -13,94 +19,71 @@ export const load: PageServerLoad = async ({ locals, url }) => {
 
 	const isAdmin = locals.user.isAdmin;
 
-	// Fetch pending edits with file information
-	const edits = isAdmin
-		? await db
-				.select({
-					edit: pendingEdits,
-					source: sources,
-					user: users,
-					editAvatarFile: files,
-					sourceAvatarFile: files
-				})
-				.from(pendingEdits)
-				.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
-				.innerJoin(users, eq(pendingEdits.userId, users.id))
-				.leftJoin(files, eq(pendingEdits.avatar, files.id))
-				.where(eq(pendingEdits.status, 'pending'))
-				.orderBy(pendingEdits.createdAt)
-		: await db
-				.select({
-					edit: pendingEdits,
-					source: sources,
-					user: users,
-					editAvatarFile: files,
-					sourceAvatarFile: files
-				})
-				.from(pendingEdits)
-				.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
-				.innerJoin(users, eq(pendingEdits.userId, users.id))
-				.leftJoin(files, eq(pendingEdits.avatar, files.id))
-				.where(and(eq(pendingEdits.userId, locals.user.id), eq(pendingEdits.status, 'pending')))
-				.orderBy(pendingEdits.createdAt);
+	// Fetch pending edits with user + edit-avatar info (all in the app database)
+	const editStatusFilter = isAdmin
+		? eq(pendingEdits.status, 'pending')
+		: and(eq(pendingEdits.userId, locals.user.id), eq(pendingEdits.status, 'pending'));
 
-	// Fetch pending creations with file information
-	const creations = isAdmin
-		? await db
-				.select({
-					creation: pendingCreations,
-					user: users,
-					avatarFile: files
-				})
-				.from(pendingCreations)
-				.innerJoin(users, eq(pendingCreations.userId, users.id))
-				.leftJoin(files, eq(pendingCreations.avatar, files.id))
-				.where(eq(pendingCreations.status, 'pending'))
-				.orderBy(pendingCreations.createdAt)
-		: await db
-				.select({
-					creation: pendingCreations,
-					user: users,
-					avatarFile: files
-				})
-				.from(pendingCreations)
-				.innerJoin(users, eq(pendingCreations.userId, users.id))
-				.leftJoin(files, eq(pendingCreations.avatar, files.id))
-				.where(
-					and(eq(pendingCreations.userId, locals.user.id), eq(pendingCreations.status, 'pending'))
-				)
-				.orderBy(pendingCreations.createdAt);
-
-	// Generate signed URLs for edit avatars
-	const editsWithAvatars = await Promise.all(
-		edits.map(async (item) => {
-			// Get avatar URL for the source's current avatar
-			const sourceAvatarUrl = item.source.avatar
-				? await db
-						.select()
-						.from(files)
-						.where(eq(files.id, item.source.avatar))
-						.limit(1)
-						.then(async ([file]) => (file ? await getSignedDownloadUrl(file.key) : null))
-				: null;
-
-			return {
-				...item,
-				sourceAvatarUrl,
-				editAvatarUrl: item.editAvatarFile
-					? await getSignedDownloadUrl(item.editAvatarFile.key)
-					: null
-			};
+	const edits = await appDb
+		.select({
+			edit: pendingEdits,
+			user: users,
+			editAvatarFile: files
 		})
-	);
+		.from(pendingEdits)
+		.innerJoin(users, eq(pendingEdits.userId, users.id))
+		.leftJoin(files, eq(pendingEdits.avatar, files.id))
+		.where(editStatusFilter)
+		.orderBy(pendingEdits.createdAt);
 
-	// Generate signed URLs for creation avatars
-	const creationsWithAvatars = await Promise.all(
-		creations.map(async (item) => ({
+	// pendingEdits.channelId refers to schema.ts' sources in the ptb_nn database -
+	// a different physical server, so it can't be a SQL join. Fetch the matching
+	// sources separately and merge in application code.
+	const editChannelIds = [...new Set(edits.map((e) => e.edit.channelId).filter((id) => id !== null))];
+	const editSources =
+		editChannelIds.length > 0
+			? await db.select().from(sources).where(inArray(sources.channelId, editChannelIds))
+			: [];
+	const sourceByChannelId = new Map(editSources.map((s) => [s.channelId, s]));
+
+	const creationStatusFilter = isAdmin
+		? eq(pendingCreations.status, 'pending')
+		: and(eq(pendingCreations.userId, locals.user.id), eq(pendingCreations.status, 'pending'));
+
+	const creations = await appDb
+		.select({
+			creation: pendingCreations,
+			user: users,
+			avatarFile: files
+		})
+		.from(pendingCreations)
+		.innerJoin(users, eq(pendingCreations.userId, users.id))
+		.leftJoin(files, eq(pendingCreations.avatar, files.id))
+		.where(creationStatusFilter)
+		.orderBy(pendingCreations.createdAt);
+
+	// Batch-resolve every avatar: edit's own upload + each creation's upload (both
+	// plain file ids), and each source's current avatar (via channelAvatars).
+	const avatarUrls = await getAvatarUrlsByFileIds([
+		...edits.map((e) => e.editAvatarFile?.id),
+		...creations.map((c) => c.avatarFile?.id)
+	]);
+	const sourceAvatarUrls = await getAvatarUrlsByChannelIds(editSources.map((s) => s.channelId));
+
+	const editsWithAvatars = edits.map((item) => {
+		const source = item.edit.channelId ? sourceByChannelId.get(item.edit.channelId) : undefined;
+		return {
 			...item,
-			avatarUrl: item.avatarFile ? await getSignedDownloadUrl(item.avatarFile.key) : null
-		}))
-	);
+			source,
+			sourceAvatarUrl: source ? (sourceAvatarUrls.get(source.channelId) ?? null) : null,
+			editAvatarUrl: item.editAvatarFile ? (avatarUrls.get(item.editAvatarFile.id) ?? null) : null
+		};
+	});
+
+	const creationsWithAvatars = creations.map((item) => ({
+		...item,
+		avatarUrl: item.avatarFile ? (avatarUrls.get(item.avatarFile.id) ?? null) : null
+	}));
 
 	return {
 		pendingEdits: editsWithAvatars,
@@ -118,40 +101,34 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const editId = parseInt(formData.get('editId')?.toString() || '');
 
-		const [editData] = await db
-			.select({
-				edit: pendingEdits,
-				source: sources
-			})
-			.from(pendingEdits)
-			.innerJoin(sources, eq(pendingEdits.channelId, sources.channelId))
-			.where(eq(pendingEdits.id, editId))
-			.limit(1);
+		const [edit] = await appDb.select().from(pendingEdits).where(eq(pendingEdits.id, editId)).limit(1);
 
-		if (!editData) {
+		if (!edit || edit.channelId === null) {
 			return { success: false, error: 'Edit not found' };
 		}
 
-		const { edit, source } = editData;
+		const [source] = await db.select().from(sources).where(eq(sources.channelId, edit.channelId)).limit(1);
+
+		if (!source) {
+			return { success: false, error: 'Channel not found' };
+		}
 
 		try {
-			// Track old avatar for deletion
-			const oldAvatarId = source.avatar;
-
 			// Prepare the update object with only non-null fields
 			const updateData: any = {};
 			if (edit.channelName !== null) updateData.channelName = edit.channelName;
 			if (edit.username !== null) updateData.username = edit.username;
 			if (edit.bias !== null) updateData.bias = edit.bias;
 			if (edit.invite !== null) updateData.invite = edit.invite;
-			if (edit.avatar !== null) updateData.avatar = edit.avatar;
 
 			// Apply the edit to the source
-			await db.update(sources).set(updateData).where(eq(sources.channelId, edit.channelId!));
+			if (Object.keys(updateData).length > 0) {
+				await db.update(sources).set(updateData).where(eq(sources.channelId, edit.channelId));
+			}
 
-			// Delete old avatar file if it was replaced
-			if (oldAvatarId && edit.avatar !== null && edit.avatar !== oldAvatarId) {
-				await deleteFileFromStorage(oldAvatarId);
+			// Avatar is tracked in mix-sv's own database, not on `sources` itself
+			if (edit.avatar !== null) {
+				await setChannelAvatar(edit.channelId, edit.avatar);
 			}
 
 			// Handle bloats if present
@@ -160,7 +137,7 @@ export const actions: Actions = {
 					const bloatPatterns: string[] = JSON.parse(edit.bloats);
 
 					// Delete existing bloats for this channel
-					await db.delete(bloats).where(eq(bloats.channelId, edit.channelId!));
+					await db.delete(bloats).where(eq(bloats.channelId, edit.channelId));
 
 					// Insert new bloats if any
 					if (bloatPatterns.length > 0) {
@@ -177,7 +154,7 @@ export const actions: Actions = {
 			}
 
 			// Mark as approved
-			await db
+			await appDb
 				.update(pendingEdits)
 				.set({
 					status: 'approved',
@@ -202,14 +179,18 @@ export const actions: Actions = {
 		const editId = parseInt(formData.get('editId')?.toString() || '');
 
 		// Get the edit to check for avatar file
-		const [edit] = await db.select().from(pendingEdits).where(eq(pendingEdits.id, editId)).limit(1);
+		const [edit] = await appDb
+			.select()
+			.from(pendingEdits)
+			.where(eq(pendingEdits.id, editId))
+			.limit(1);
 
 		if (edit?.avatar) {
 			// Delete the avatar file since the edit is being rejected
 			await deleteFileFromStorage(edit.avatar);
 		}
 
-		await db
+		await appDb
 			.update(pendingEdits)
 			.set({
 				status: 'rejected',
@@ -229,7 +210,11 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const editId = parseInt(formData.get('editId')?.toString() || '');
 
-		const [edit] = await db.select().from(pendingEdits).where(eq(pendingEdits.id, editId)).limit(1);
+		const [edit] = await appDb
+			.select()
+			.from(pendingEdits)
+			.where(eq(pendingEdits.id, editId))
+			.limit(1);
 
 		if (!edit) {
 			return { success: false, error: 'Edit not found' };
@@ -245,7 +230,7 @@ export const actions: Actions = {
 		}
 
 		// Delete the pending edit
-		await db.delete(pendingEdits).where(eq(pendingEdits.id, editId));
+		await appDb.delete(pendingEdits).where(eq(pendingEdits.id, editId));
 
 		return { success: true };
 	},
@@ -258,7 +243,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const creationId = parseInt(formData.get('creationId')?.toString() || '');
 
-		const [creation] = await db
+		const [creation] = await appDb
 			.select()
 			.from(pendingCreations)
 			.where(eq(pendingCreations.id, creationId))
@@ -275,9 +260,13 @@ export const actions: Actions = {
 				channelName: creation.channelName,
 				username: creation.username,
 				bias: creation.bias,
-				invite: creation.invite,
-				avatar: creation.avatar
+				invite: creation.invite
 			});
+
+			// Avatar is tracked in mix-sv's own database, not on `sources` itself
+			if (creation.avatar) {
+				await setChannelAvatar(creation.channelId!, creation.avatar);
+			}
 
 			// Handle bloats if present
 			if (creation.bloats) {
@@ -298,7 +287,7 @@ export const actions: Actions = {
 			}
 
 			// Mark as approved
-			await db
+			await appDb
 				.update(pendingCreations)
 				.set({
 					status: 'approved',
@@ -326,7 +315,7 @@ export const actions: Actions = {
 		const creationId = parseInt(formData.get('creationId')?.toString() || '');
 
 		// Get the creation to check for avatar file
-		const [creation] = await db
+		const [creation] = await appDb
 			.select()
 			.from(pendingCreations)
 			.where(eq(pendingCreations.id, creationId))
@@ -337,7 +326,7 @@ export const actions: Actions = {
 			await deleteFileFromStorage(creation.avatar);
 		}
 
-		await db
+		await appDb
 			.update(pendingCreations)
 			.set({
 				status: 'rejected',
@@ -357,7 +346,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const creationId = parseInt(formData.get('creationId')?.toString() || '');
 
-		const [creation] = await db
+		const [creation] = await appDb
 			.select()
 			.from(pendingCreations)
 			.where(eq(pendingCreations.id, creationId))
@@ -377,7 +366,7 @@ export const actions: Actions = {
 		}
 
 		// Delete the pending creation
-		await db.delete(pendingCreations).where(eq(pendingCreations.id, creationId));
+		await appDb.delete(pendingCreations).where(eq(pendingCreations.id, creationId));
 
 		return { success: true };
 	}

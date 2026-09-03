@@ -233,7 +233,7 @@
 					<!-- Channel Info -->
 					<div class="min-w-0 flex-1">
 						<h3 class="truncate font-semibold text-white">
-							{channel.channelName}
+							{channel.displayName}
 						</h3>
 						<div class="flex items-center gap-2">
 							{#if channel.username}

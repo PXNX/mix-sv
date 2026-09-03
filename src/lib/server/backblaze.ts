@@ -15,9 +15,9 @@ import {
 	BACKBLAZE_REGION,
 	BACKBLAZE_ENDPOINT
 } from '$env/static/private';
-import { db } from './db';
-import { files } from './schema';
-import { eq } from 'drizzle-orm/sql';
+import { appDb } from './db';
+import { files, channelAvatars } from './app-schema';
+import { eq, inArray } from 'drizzle-orm';
 
 const s3Client = new S3Client({
 	endpoint: BACKBLAZE_ENDPOINT,
@@ -249,7 +249,7 @@ export async function getSignedDownloadUrlShort(key: string): Promise<string> {
 export async function deleteFileFromStorage(fileId: string) {
 	try {
 		// Get file info
-		const [file] = await db.select().from(files).where(eq(files.id, fileId)).limit(1);
+		const [file] = await appDb.select().from(files).where(eq(files.id, fileId)).limit(1);
 
 		if (!file) return;
 
@@ -261,9 +261,94 @@ export async function deleteFileFromStorage(fileId: string) {
 		await s3Client.send(deleteCommand);
 
 		// Delete from database
-		await db.delete(files).where(eq(files.id, fileId));
+		await appDb.delete(files).where(eq(files.id, fileId));
 	} catch (error) {
 		console.error('Error deleting file:', error);
 		// Don't throw - we still want the operation to succeed even if file deletion fails
+	}
+}
+
+/**
+ * Resolve file ids (e.g. pending_edits.avatar/pending_creations.avatar) to
+ * signed URLs, in one batched query against the app database.
+ */
+export async function getAvatarUrlsByFileIds(
+	fileIds: (string | null | undefined)[]
+): Promise<Map<string, string>> {
+	const ids = [...new Set(fileIds.filter((id): id is string => !!id))];
+	const urls = new Map<string, string>();
+	if (ids.length === 0) return urls;
+
+	const records = await appDb.select().from(files).where(inArray(files.id, ids));
+	await Promise.all(
+		records.map(async (file) => {
+			try {
+				urls.set(file.id, await getSignedDownloadUrl(file.key));
+			} catch (err) {
+				console.error(`Failed to generate avatar URL for file ${file.id}:`, err);
+			}
+		})
+	);
+	return urls;
+}
+
+/**
+ * Resolve source channel ids to their current avatar's signed URL, via
+ * app-schema.ts' channelAvatars mapping (sources.avatar doesn't exist on the
+ * real ptb_nn table, so this is tracked entirely on mix-sv's side).
+ */
+export async function getAvatarUrlsByChannelIds(
+	channelIds: (number | null | undefined)[]
+): Promise<Map<number, string>> {
+	const ids = [...new Set(channelIds.filter((id): id is number => id != null))];
+	const urls = new Map<number, string>();
+	if (ids.length === 0) return urls;
+
+	const records = await appDb
+		.select({ channelId: channelAvatars.channelId, key: files.key })
+		.from(channelAvatars)
+		.innerJoin(files, eq(channelAvatars.fileId, files.id))
+		.where(inArray(channelAvatars.channelId, ids));
+
+	await Promise.all(
+		records.map(async (record) => {
+			try {
+				urls.set(record.channelId, await getSignedDownloadUrl(record.key));
+			} catch (err) {
+				console.error(`Failed to generate avatar URL for channel ${record.channelId}:`, err);
+			}
+		})
+	);
+	return urls;
+}
+
+/** Set (or clear, if fileId is null) the current avatar for a source channel. */
+export async function setChannelAvatar(channelId: number, fileId: string | null) {
+	const [existing] = await appDb
+		.select()
+		.from(channelAvatars)
+		.where(eq(channelAvatars.channelId, channelId))
+		.limit(1);
+
+	if (fileId === null) {
+		if (existing) {
+			await appDb.delete(channelAvatars).where(eq(channelAvatars.channelId, channelId));
+			await deleteFileFromStorage(existing.fileId);
+		}
+		return;
+	}
+
+	if (existing && existing.fileId === fileId) return;
+
+	await appDb
+		.insert(channelAvatars)
+		.values({ channelId, fileId })
+		.onConflictDoUpdate({
+			target: channelAvatars.channelId,
+			set: { fileId, updatedAt: new Date() }
+		});
+
+	if (existing) {
+		await deleteFileFromStorage(existing.fileId);
 	}
 }

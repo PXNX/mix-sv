@@ -1,10 +1,10 @@
 // src/routes/auth/callback/google/+server.ts
 import { OAuth2RequestError } from 'arctic';
 import { google, generateSessionToken, createSession } from '$lib/server/auth';
-import { db } from '$lib/server/db';
+import { appDb } from '$lib/server/db';
 import { eq } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
-import { users } from '$lib/server/schema';
+import { users } from '$lib/server/app-schema';
 
 export const GET: RequestHandler = async ({ url, cookies }) => {
 	const code = url.searchParams.get('code');
@@ -43,7 +43,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 		console.log('👤 Google user:', googleUser.email);
 
 		// Check if user exists, if not create them
-		const existingUser = await db
+		const existingUser = await appDb
 			.select()
 			.from(users)
 			.where(eq(users.email, googleUser.email))
@@ -54,7 +54,7 @@ export const GET: RequestHandler = async ({ url, cookies }) => {
 			console.log('✨ Creating new user');
 
 			// Create new account (as regular user)
-			const newUser = await db
+			const newUser = await appDb
 				.insert(users)
 				.values({
 					id: googleUser.sub,

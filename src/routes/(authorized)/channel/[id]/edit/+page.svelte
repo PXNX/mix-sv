@@ -425,6 +425,108 @@
 			{/if}
 		</div>
 
+		<!-- Admin-only extended fields -->
+		{#if data.isAdmin}
+			<div class="space-y-6 border-t border-white/10 pt-6">
+				<h2 class="text-lg font-semibold text-white">Admin Settings</h2>
+
+				<div>
+					<label for="display-name" class="mb-2 block text-sm font-medium text-white">
+						Display Name <span class="text-xs text-white/50">(shown instead of channel name if set)</span>
+					</label>
+					<input
+						id="display-name"
+						type="text"
+						name="displayName"
+						class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none"
+						bind:value={$form.displayName}
+						disabled={$submitting}
+					/>
+				</div>
+
+				<div>
+					<label for="description" class="mb-2 block text-sm font-medium text-white">Description</label>
+					<textarea
+						id="description"
+						name="description"
+						rows="3"
+						class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none"
+						bind:value={$form.description}
+						disabled={$submitting}
+					></textarea>
+				</div>
+
+				<div class="grid grid-cols-2 gap-4">
+					<div>
+						<label for="rating" class="mb-2 block text-sm font-medium text-white">Rating</label>
+						<input
+							id="rating"
+							type="number"
+							name="rating"
+							class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/50 transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none"
+							bind:value={$form.rating}
+							disabled={$submitting}
+						/>
+					</div>
+
+					<div>
+						<label for="destination" class="mb-2 block text-sm font-medium text-white">Destination</label>
+						<select
+							id="destination"
+							name="destination"
+							class="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white transition-colors focus:border-white/40 focus:bg-white/10 focus:outline-none"
+							bind:value={$form.destination}
+							disabled={$submitting}
+						>
+							<option value="" class="bg-gray-900 text-white">None</option>
+							{#each data.destinationOptions as dest}
+								<option value={dest.channelId.toString()} class="bg-gray-900 text-white">
+									{dest.name}
+								</option>
+							{/each}
+						</select>
+					</div>
+				</div>
+
+				<div>
+					<span class="mb-2 block text-sm font-medium text-white">
+						Posting Account <span class="text-xs text-white/50"
+							>(read-only - only ptb-nn can attach/detach an account, since it's the one that
+							actually joins/leaves the channel)</span
+						>
+					</span>
+					<div class="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-white/70">
+						{data.currentAccount
+							? `${data.currentAccount.name} (${data.currentAccount.phoneNumber})`
+							: 'None attached'}
+					</div>
+				</div>
+
+				<div class="flex gap-6">
+					<label class="flex items-center gap-2 text-sm font-medium text-white">
+						<input
+							type="checkbox"
+							name="isActive"
+							class="checkbox"
+							bind:checked={$form.isActive}
+							disabled={$submitting}
+						/>
+						Active
+					</label>
+					<label class="flex items-center gap-2 text-sm font-medium text-white">
+						<input
+							type="checkbox"
+							name="isSpread"
+							class="checkbox"
+							bind:checked={$form.isSpread}
+							disabled={$submitting}
+						/>
+						Spread (repost to destination)
+					</label>
+				</div>
+			</div>
+		{/if}
+
 		<!-- Bloats Section -->
 		<div class="border-t border-white/10 pt-6">
 			<label class="mb-3 block text-sm font-medium text-white">

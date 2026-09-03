@@ -1,15 +1,23 @@
 // src/routes/channel/new/+page.server.ts
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { db } from '$lib/server/db';
-import { pendingCreations, sources, bloats } from '$lib/server/schema';
+import { db, appDb } from '$lib/server/db';
+import { sources, bloats } from '$lib/server/schema';
+import { pendingCreations } from '$lib/server/app-schema';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { channelSchema } from './schema';
 import { eq } from 'drizzle-orm';
 
-export const load: PageServerLoad = async ({ locals }) => {
-	const form = await superValidate(valibot(channelSchema));
+export const load: PageServerLoad = async ({ locals, url }) => {
+	// Prefilled when opened from ptb-nn's WebApp button after forwarding a
+	// channel message, so admins don't have to retype what the bot already knows.
+	const prefill = {
+		channelId: url.searchParams.get('channelId') || undefined,
+		channelName: url.searchParams.get('channelName') || undefined,
+		username: url.searchParams.get('username') || undefined
+	};
+	const form = await superValidate(prefill, valibot(channelSchema));
 	return {
 		form,
 		isAdmin: locals.user?.isAdmin || false
@@ -97,7 +105,7 @@ export const actions: Actions = {
 			// Non-admin: Insert pending creation for review
 			const bloatsJson = JSON.stringify(bloatPatterns || []);
 
-			await db.insert(pendingCreations).values({
+			await appDb.insert(pendingCreations).values({
 				userId: locals.user.id,
 				channelId: channelIdNum,
 				channelName,
