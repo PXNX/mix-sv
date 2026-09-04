@@ -2,7 +2,57 @@
 @plugin '@tailwindcss/typography';
 @plugin '@tailwindcss/forms';
 @plugin 'daisyui' {
-	themes: dark --default;
+	themes: false;
+}
+
+/* Telegram's dark-theme palette (desktop/web-A colors), applied as a custom
+   daisyUI theme so every daisyUI component (btn, badge, alert, ...) picks it
+   up automatically. */
+@plugin 'daisyui/theme' {
+	name: 'telegram';
+	default: true;
+	prefersdark: true;
+	color-scheme: dark;
+
+	--color-base-100: #0e1621;
+	--color-base-200: #17212b;
+	--color-base-300: #22303c;
+	--color-base-content: #e5e9ed;
+
+	--color-primary: #2aabee;
+	--color-primary-content: #ffffff;
+
+	--color-secondary: #64b5ef;
+	--color-secondary-content: #0e1621;
+
+	--color-accent: #4dcd5e;
+	--color-accent-content: #0e1621;
+
+	--color-neutral: #182533;
+	--color-neutral-content: #e5e9ed;
+
+	--color-info: #64b5ef;
+	--color-info-content: #0e1621;
+
+	--color-success: #4dcd5e;
+	--color-success-content: #0e1621;
+
+	--color-warning: #f2a93b;
+	--color-warning-content: #0e1621;
+
+	--color-error: #ee5f5f;
+	--color-error-content: #ffffff;
+
+	--radius-selector: 1rem;
+	--radius-field: 0.75rem;
+	--radius-box: 1.25rem;
+
+	--size-selector: 0.25rem;
+	--size-field: 0.25rem;
+
+	--border: 1px;
+	--depth: 0;
+	--noise: 0;
 }
 
 @layer base {
@@ -17,6 +67,22 @@
 		font-weight: 400;
 		font-style: normal;
 		font-display: swap;
+	}
+}
+
+/* Reusable Telegram-style building blocks, used instead of repeating the same
+   panel/input/list-row utility strings everywhere. */
+@layer components {
+	.tg-panel {
+		@apply rounded-box border border-base-300/60 bg-base-200;
+	}
+
+	.tg-input {
+		@apply w-full rounded-field border border-base-300 bg-base-100 px-4 py-3 text-base-content placeholder-base-content/40 transition-colors focus:border-primary focus:outline-none;
+	}
+
+	.tg-row {
+		@apply flex items-center gap-3 px-4 py-3 transition-colors hover:bg-base-300/50 active:bg-base-300;
 	}
 }
 

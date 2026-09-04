@@ -1,8 +1,5 @@
 <!-- src/lib/component/ChannelAvatar.svelte -->
 <script lang="ts">
-	import IconChannel from '~icons/fluent/channel-24-regular';
-	import IconImageOff from '~icons/fluent/image-off-24-regular';
-
 	interface Props {
 		username?: string | null;
 		alt: string;
@@ -14,7 +11,6 @@
 	let { username = null, alt, avatarUrl = null, size = 'md', priority = false }: Props = $props();
 
 	let loaded = $state(false);
-	let error = $state(false);
 	let currentSource = $state<'avatar' | 'telegram' | 'none'>('avatar');
 
 	const sizeClasses = {
@@ -22,18 +18,18 @@
 		lg: 'size-24'
 	};
 
-	const iconSizes = {
-		md: 'size-7',
-		lg: 'size-10'
+	const textSizes = {
+		md: 'text-xl',
+		lg: 'text-3xl'
 	};
 
 	const containerClass = $derived(`${sizeClasses[size]} rounded-full`);
-	const iconClass = $derived(iconSizes[size]);
-	
+	const textClass = $derived(textSizes[size]);
+
 	// Clean username and construct Telegram avatar URL
 	const cleanUsername = $derived(username?.replace('@', ''));
 	const telegramAvatarUrl = $derived(cleanUsername ? `https://t.me/i/userpic/160/${cleanUsername}.jpg` : null);
-	
+
 	// Determine which avatar to display based on current source
 	const currentAvatarUrl = $derived(() => {
 		if (currentSource === 'avatar' && avatarUrl) {
@@ -45,6 +41,22 @@
 		return null;
 	});
 
+	// Telegram itself falls back to a colored circle with the peer's initial
+	// whenever there's no profile photo - same idea here instead of a broken-
+	// image icon, both while a photo is loading and if every source fails.
+	const AVATAR_COLORS = ['#e17076', '#faa774', '#a695e7', '#7bc862', '#6ec9cb', '#65aadd', '#ee7aae'];
+
+	const initial = $derived(alt?.trim()?.[0]?.toUpperCase() || '#');
+
+	const avatarColor = $derived.by(() => {
+		const key = username || alt || '';
+		let hash = 0;
+		for (let i = 0; i < key.length; i++) {
+			hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+		}
+		return AVATAR_COLORS[hash % AVATAR_COLORS.length];
+	});
+
 	function handleImageLoad(e: Event) {
 		const img = e.currentTarget as HTMLImageElement;
 		// Telegram returns 1x1 transparent image for non-existent users
@@ -52,28 +64,22 @@
 			handleImageError();
 		} else {
 			loaded = true;
-			error = false;
 		}
 	}
 
 	function handleImageError() {
 		// Try fallback sources in order: avatar -> telegram -> none
 		if (currentSource === 'avatar' && telegramAvatarUrl) {
-			// Avatar failed, try Telegram
 			currentSource = 'telegram';
 			loaded = false;
-			error = false;
-		} else if (currentSource === 'telegram' || (currentSource === 'avatar' && !telegramAvatarUrl)) {
-			// All sources failed
+		} else {
 			currentSource = 'none';
-			error = true;
 			loaded = false;
 		}
 	}
 
 	// Reset state when props change
 	$effect(() => {
-		// Determine initial source
 		if (avatarUrl) {
 			currentSource = 'avatar';
 		} else if (telegramAvatarUrl) {
@@ -82,16 +88,16 @@
 			currentSource = 'none';
 		}
 		loaded = false;
-		error = false;
 	});
 </script>
 
-<div class="relative {containerClass} overflow-hidden bg-base-200 shadow-md">
-	{#if !loaded && !error && currentSource !== 'none'}
-		<div class="absolute inset-0 flex items-center justify-center">
-			<IconChannel class="{iconClass} animate-pulse text-base-content/20" />
-		</div>
-	{/if}
+<div class="relative {containerClass} overflow-hidden shadow-sm">
+	<div
+		class="absolute inset-0 flex items-center justify-center font-semibold text-white {textClass}"
+		style="background-color: {avatarColor}"
+	>
+		{initial}
+	</div>
 
 	{#if currentAvatarUrl()}
 		<img
@@ -99,21 +105,11 @@
 			{alt}
 			loading={priority ? 'eager' : 'lazy'}
 			decoding="async"
-			class="h-full w-full object-cover transition-opacity duration-300 {loaded
+			class="relative h-full w-full object-cover transition-opacity duration-300 {loaded
 				? 'opacity-100'
 				: 'opacity-0'}"
 			onload={handleImageLoad}
 			onerror={handleImageError}
 		/>
-	{:else}
-		<div class="absolute inset-0 flex items-center justify-center">
-			<IconImageOff class="{iconClass} text-error/40" />
-		</div>
-	{/if}
-
-	{#if error}
-		<div class="absolute inset-0 flex items-center justify-center">
-			<IconImageOff class="{iconClass} text-error/40" />
-		</div>
 	{/if}
 </div>

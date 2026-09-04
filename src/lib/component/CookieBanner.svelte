@@ -8,9 +8,9 @@
 			body: 'By using this site, you agree with our use of cookies'
 		},
 		theme: {
-			primary: '#14cabf',
-			dark: '#131f37',
-			medium: '#b0bfd9',
+			primary: '#2aabee',
+			dark: '#0e1621',
+			medium: '#64b5ef',
 			light: '#fff'
 		}
 	};
