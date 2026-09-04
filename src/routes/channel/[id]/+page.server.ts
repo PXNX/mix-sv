@@ -4,7 +4,7 @@ import { db } from '$lib/server/db';
 import { sources, destinations, accounts } from '$lib/server/schema';
 import { eq } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
-import { getAvatarUrlsByChannelIds } from '$lib/server/backblaze';
+import { getAvatarUrlsByFileIds } from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const id = parseInt(params.id);
@@ -14,8 +14,6 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 	}
 
 	try {
-		// destinations/accounts live in the same ptb_nn database as sources, so those
-		// can still be joined. files (avatars) lives in mix-sv's own database instead.
 		const result = await db
 			.select({
 				channelId: sources.channelId,
@@ -28,6 +26,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				rating: sources.rating,
 				isActive: sources.isActive,
 				isSpread: sources.isSpread,
+				avatarFileId: sources.avatar,
 				destinationName: destinations.name,
 				accountName: accounts.name
 			})
@@ -44,8 +43,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 		}
 
 		// Generate signed URL if avatar exists
-		const avatarUrls = await getAvatarUrlsByChannelIds([channel.channelId]);
-		const avatarUrl = avatarUrls.get(channel.channelId) ?? null;
+		const avatarUrls = await getAvatarUrlsByFileIds([channel.avatarFileId]);
+		const avatarUrl = channel.avatarFileId ? (avatarUrls.get(channel.avatarFileId) ?? null) : null;
 
 		return {
 			channel: {

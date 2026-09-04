@@ -4,7 +4,7 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { sources } from '$lib/server/schema';
 import { inArray } from 'drizzle-orm';
-import { getAvatarUrlsByChannelIds } from '$lib/server/backblaze';
+import { getAvatarUrlsByFileIds } from '$lib/server/backblaze';
 
 export const GET: RequestHandler = async ({ url }) => {
 	const idsParam = url.searchParams.get('ids');
@@ -23,20 +23,20 @@ export const GET: RequestHandler = async ({ url }) => {
 			return json({ channels: [] });
 		}
 
-		// sources lives in ptb_nn; avatars are tracked separately in mix-sv's own database
 		const results = await db
 			.select({
 				channelId: sources.channelId,
 				channelName: sources.channelName,
 				username: sources.username,
 				bias: sources.bias,
-				invite: sources.invite
+				invite: sources.invite,
+				avatarFileId: sources.avatar
 			})
 			.from(sources)
 			.where(inArray(sources.channelId, ids))
 			.orderBy(sources.channelName);
 
-		const avatarUrls = await getAvatarUrlsByChannelIds(results.map((r) => r.channelId));
+		const avatarUrls = await getAvatarUrlsByFileIds(results.map((r) => r.avatarFileId));
 
 		const channelsWithAvatars = results.map((channel) => ({
 			channelId: channel.channelId,
@@ -44,7 +44,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			username: channel.username,
 			bias: channel.bias,
 			invite: channel.invite,
-			avatar: avatarUrls.get(channel.channelId) ?? null
+			avatar: channel.avatarFileId ? (avatarUrls.get(channel.avatarFileId) ?? null) : null
 		}));
 
 		return json({ channels: channelsWithAvatars });

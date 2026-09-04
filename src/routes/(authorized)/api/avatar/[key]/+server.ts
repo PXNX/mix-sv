@@ -1,8 +1,8 @@
 // src/routes/api/avatar/[key]/+server.ts
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { appDb } from '$lib/server/db';
-import { files } from '$lib/server/app-schema';
+import { db } from '$lib/server/db';
+import { files } from '$lib/server/schema';
 import { eq } from 'drizzle-orm';
 import { getSignedDownloadUrl } from '$lib/server/backblaze';
 
@@ -15,7 +15,7 @@ export const GET: RequestHandler = async ({ params, setHeaders }) => {
 
 	try {
 		// Find the file record
-		const fileRecord = await appDb.query.files.findFirst({
+		const fileRecord = await db.query.files.findFirst({
 			where: eq(files.key, key)
 		});
 

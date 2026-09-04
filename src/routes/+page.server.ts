@@ -5,11 +5,9 @@ import { sources } from '$lib/server/schema';
 import { ilike, eq, and } from 'drizzle-orm';
 import { error } from '@sveltejs/kit';
 import type { SQL } from 'drizzle-orm';
-import { getAvatarUrlsByChannelIds } from '$lib/server/backblaze';
+import { getAvatarUrlsByFileIds } from '$lib/server/backblaze';
 
 async function getChannelsWithAvatars(conditions: SQL[]) {
-	// sources lives in ptb_nn; avatars are tracked separately in mix-sv's own
-	// database (see channelAvatars in app-schema.ts), so resolve them after.
 	let query = db
 		.select({
 			channelId: sources.channelId,
@@ -17,7 +15,8 @@ async function getChannelsWithAvatars(conditions: SQL[]) {
 			displayName: sources.displayName,
 			username: sources.username,
 			bias: sources.bias,
-			invite: sources.invite
+			invite: sources.invite,
+			avatarFileId: sources.avatar
 		})
 		.from(sources);
 
@@ -26,7 +25,7 @@ async function getChannelsWithAvatars(conditions: SQL[]) {
 	}
 
 	const results = await query.orderBy(sources.channelName);
-	const avatarUrls = await getAvatarUrlsByChannelIds(results.map((r) => r.channelId));
+	const avatarUrls = await getAvatarUrlsByFileIds(results.map((r) => r.avatarFileId));
 
 	return results.map((channel) => ({
 		channelId: channel.channelId,
@@ -35,7 +34,7 @@ async function getChannelsWithAvatars(conditions: SQL[]) {
 		username: channel.username,
 		bias: channel.bias,
 		invite: channel.invite,
-		avatar: avatarUrls.get(channel.channelId) ?? null
+		avatar: channel.avatarFileId ? (avatarUrls.get(channel.avatarFileId) ?? null) : null
 	}));
 }
 

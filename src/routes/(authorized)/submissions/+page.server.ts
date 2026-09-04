@@ -2,13 +2,13 @@
 import { fail } from '@sveltejs/kit';
 import { eq, and } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
-import { appDb } from '$lib/server/db';
-import { pendingCreations, pendingEdits, files } from '$lib/server/app-schema';
+import { db } from '$lib/server/db';
+import { pendingCreations, pendingEdits, files } from '$lib/server/schema';
 import { deleteFileFromStorage, getSignedDownloadUrl } from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// Fetch user's pending creations with avatar files
-	const userCreations = await appDb
+	const userCreations = await db
 		.select({
 			creation: pendingCreations,
 			avatarFile: files
@@ -19,7 +19,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		.orderBy(pendingCreations.createdAt);
 
 	// Fetch user's pending edits with avatar files
-	const userEdits = await appDb
+	const userEdits = await db
 		.select({
 			edit: pendingEdits,
 			avatarFile: files
@@ -77,7 +77,7 @@ export const actions: Actions = {
 
 		try {
 			// Verify the submission belongs to the user and is pending
-			const [submission] = await appDb
+			const [submission] = await db
 				.select()
 				.from(pendingCreations)
 				.where(
@@ -103,7 +103,7 @@ export const actions: Actions = {
 			}
 
 			// Delete the submission
-			await appDb.delete(pendingCreations).where(eq(pendingCreations.id, submissionId));
+			await db.delete(pendingCreations).where(eq(pendingCreations.id, submissionId));
 
 			return {
 				success: true,
@@ -142,7 +142,7 @@ export const actions: Actions = {
 
 		try {
 			// Verify the edit belongs to the user and is pending
-			const [edit] = await appDb
+			const [edit] = await db
 				.select()
 				.from(pendingEdits)
 				.where(and(eq(pendingEdits.id, editId), eq(pendingEdits.userId, locals.user.id)))
@@ -166,7 +166,7 @@ export const actions: Actions = {
 			}
 
 			// Delete the edit
-			await appDb.delete(pendingEdits).where(eq(pendingEdits.id, editId));
+			await db.delete(pendingEdits).where(eq(pendingEdits.id, editId));
 
 			return {
 				success: true,

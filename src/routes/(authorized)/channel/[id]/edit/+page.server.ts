@@ -3,12 +3,11 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
-import { db, appDb } from '$lib/server/db';
-import { sources, bloats, destinations, accounts } from '$lib/server/schema';
-import { pendingEdits, files, channelAvatars } from '$lib/server/app-schema';
+import { db } from '$lib/server/db';
+import { sources, bloats, destinations, accounts, pendingEdits, files } from '$lib/server/schema';
 import { eq, and } from 'drizzle-orm';
 import { channelSchema } from './schema';
-import { uploadImageWithPreset, setChannelAvatar } from '$lib/server/backblaze';
+import { uploadImageWithPreset } from '$lib/server/backblaze';
 
 export const load: PageServerLoad = async ({ params, locals }) => {
 	const channelId = parseInt(params.id);
@@ -32,16 +31,8 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 
 	const bloatPatterns = existingBloats.map((b) => b.pattern);
 
-	// Current avatar is tracked in mix-sv's own database, not on `sources` itself
-	const [currentAvatar] = await appDb
-		.select()
-		.from(channelAvatars)
-		.where(eq(channelAvatars.channelId, channelId))
-		.limit(1);
-	const currentAvatarFileId = currentAvatar?.fileId ?? '';
-
 	// Check for pending edits by this user
-	const pendingEdit = await appDb.query.pendingEdits.findFirst({
+	const pendingEdit = await db.query.pendingEdits.findFirst({
 		where: and(
 			eq(pendingEdits.channelId, channelId),
 			eq(pendingEdits.userId, locals.user.id),
@@ -66,7 +57,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				username: pendingEdit.username || channel.username,
 				bias: pendingEdit.bias || channel.bias,
 				invite: pendingEdit.invite || channel.invite || '',
-				avatar: pendingEdit.avatar || currentAvatarFileId,
+				avatar: pendingEdit.avatar || channel.avatar || '',
 				bloats: pendingBloats
 			}
 		: {
@@ -74,7 +65,7 @@ export const load: PageServerLoad = async ({ params, locals }) => {
 				username: channel.username,
 				bias: channel.bias,
 				invite: channel.invite || '',
-				avatar: currentAvatarFileId,
+				avatar: channel.avatar || '',
 				bloats: bloatPatterns,
 				displayName: channel.displayName || '',
 				description: channel.description || '',
@@ -134,7 +125,7 @@ export const actions: Actions = {
 					}
 
 					// Save file metadata to database
-					const [fileRecord] = await appDb
+					const [fileRecord] = await db
 						.insert(files)
 						.values({
 							id: crypto.randomUUID(),
@@ -174,6 +165,7 @@ export const actions: Actions = {
 						username: cleanUsername,
 						bias: form.data.bias,
 						invite: form.data.invite || null,
+						avatar: avatarFileId,
 						displayName: form.data.displayName || null,
 						description: form.data.description || null,
 						rating: Number.isNaN(rating!) ? null : rating,
@@ -182,9 +174,6 @@ export const actions: Actions = {
 						isSpread: form.data.isSpread
 					})
 					.where(eq(sources.channelId, channelId));
-
-				// Avatar is tracked in mix-sv's own database, not on `sources` itself
-				await setChannelAvatar(channelId, avatarFileId);
 
 				// Update bloats - delete all existing and insert new ones
 				await db.delete(bloats).where(eq(bloats.channelId, channelId));
@@ -199,7 +188,7 @@ export const actions: Actions = {
 				}
 			} else {
 				// Non-admin: Create or update pending edit
-				const existingPending = await appDb.query.pendingEdits.findFirst({
+				const existingPending = await db.query.pendingEdits.findFirst({
 					where: and(
 						eq(pendingEdits.channelId, channelId),
 						eq(pendingEdits.userId, locals.user.id),
@@ -211,7 +200,7 @@ export const actions: Actions = {
 
 				if (existingPending) {
 					// Update existing pending edit
-					await appDb
+					await db
 						.update(pendingEdits)
 						.set({
 							channelName: form.data.channelName,
@@ -225,7 +214,7 @@ export const actions: Actions = {
 						.where(eq(pendingEdits.id, existingPending.id));
 				} else {
 					// Create new pending edit
-					await appDb.insert(pendingEdits).values({
+					await db.insert(pendingEdits).values({
 						channelId,
 						userId: locals.user.id,
 						channelName: form.data.channelName,

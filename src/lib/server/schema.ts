@@ -1,13 +1,17 @@
 // src/lib/server/schema.ts
-// Tables owned by ptb-nn/tg-nn, living in the ptb_nn database on mn.
-// mix-sv reads all of these and may write to `sources` (except `avatar`,
-// which is only ever set by mix-sv itself, and `api_id`, which only ptb-nn
-// may change since it's the one that actually joins/leaves the channel).
-// mix-sv's own tables (users/sessions/files/pending_edits/pending_creations)
-// live in a separate Neon database - see app-schema.ts. Because these are two
-// physically separate Postgres servers, there is no DB-level foreign key from
-// `sources.avatar` to the `files` table anymore; it's just a plain id string.
-import { pgTable, text, integer, boolean, bigint, primaryKey } from 'drizzle-orm/pg-core';
+// Single database for mix-sv: channel data (sources/bloats/destinations/accounts)
+// and mix-sv's own auth/moderation-queue data (users/sessions/files/pending_edits/
+// pending_creations) all live together here, with real foreign keys throughout.
+import {
+	pgTable,
+	serial,
+	text,
+	integer,
+	boolean,
+	timestamp,
+	bigint,
+	primaryKey
+} from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
 // Destinations table (channels sources get reposted into)
@@ -37,19 +41,17 @@ export const sources = pgTable('sources', {
 	displayName: text('display_name'),
 	username: text('username'),
 	invite: text('invite'),
-	// Column is named api_id for historical reasons but references accounts.accountId,
-	// i.e. it's the account used to collect/post this source, not a Telegram API id.
-	// mix-sv only ever reads this - only ptb-nn writes it.
+	// mix-sv only ever reads this - only ptb-nn's own tooling is meant to attach
+	// an account, since actually joining/leaving a channel needs its Telegram
+	// session (mix-sv doesn't manage those sessions).
 	apiId: bigint('api_id', { mode: 'number' }).references(() => accounts.accountId),
 	description: text('description'),
 	rating: integer('rating'),
 	destination: bigint('destination', { mode: 'number' }).references(() => destinations.channelId),
 	detailId: integer('detail_id'),
 	isActive: boolean('is_active').default(false),
-	isSpread: boolean('is_spread').notNull().default(true)
-	// No `avatar` column here - the real table (owned by ptb-nn/tg-nn) doesn't have
-	// one, and mix-sv isn't adding one. Avatar-per-channel is tracked entirely in
-	// mix-sv's own database instead - see app-schema.ts' `channelAvatars` table.
+	isSpread: boolean('is_spread').notNull().default(true),
+	avatar: text('avatar').references(() => files.id, { onDelete: 'set null' })
 });
 
 // Bloats table (regex patterns for filtering)
@@ -59,17 +61,95 @@ export const bloats = pgTable(
 		channelId: bigint('channel_id', { mode: 'number' })
 			.notNull()
 			.references(() => sources.channelId, { onDelete: 'cascade' }),
-		pattern: text('pattern').notNull()
-		// No `created_at` here either, for the same reason - the real table doesn't have it.
+		pattern: text('pattern').notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(table) => ({
 		pk: primaryKey({ columns: [table.channelId, table.pattern] })
 	})
 );
 
+// Users table
+export const users = pgTable('users', {
+	id: text('id').primaryKey(),
+	email: text('email').unique(), // Made optional for Telegram users
+	telegramId: bigint('telegram_id', { mode: 'number' }).unique(),
+	username: text('username'),
+	picture: text('picture'),
+	isAdmin: boolean('is_admin').notNull().default(false),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// Sessions table
+export const sessions = pgTable('sessions', {
+	id: text('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	expiresAt: timestamp('expires_at', { withTimezone: true, mode: 'date' }).notNull()
+});
+
+// Files uploaded to Backblaze
+export const files = pgTable('files', {
+	id: text('id').primaryKey(),
+	key: text('key').notNull().unique(),
+	fileName: text('file_name').notNull(),
+	contentType: text('content_type').notNull(),
+	sizeBytes: integer('size_bytes').notNull(),
+	uploadedBy: text('uploaded_by')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	uploadedAt: timestamp('uploaded_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// Pending edits table
+export const pendingEdits = pgTable('pending_edits', {
+	id: serial('id').primaryKey(),
+	channelId: bigint('channel_id', { mode: 'number' }).references(() => sources.channelId, {
+		onDelete: 'cascade'
+	}),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	// Edit fields
+	channelName: text('channel_name'),
+	username: text('username'),
+	bias: text('bias'),
+	invite: text('invite'),
+	avatar: text('avatar').references(() => files.id, { onDelete: 'set null' }),
+	bloats: text('bloats'), // JSON array of patterns
+	status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+	reviewedBy: text('reviewed_by').references(() => users.id)
+});
+
+// Pending creations table
+export const pendingCreations = pgTable('pending_creations', {
+	id: serial('id').primaryKey(),
+	userId: text('user_id')
+		.notNull()
+		.references(() => users.id, { onDelete: 'cascade' }),
+	channelId: bigint('channel_id', { mode: 'number' }),
+	channelName: text('channel_name').notNull(),
+	username: text('username').notNull(),
+	bias: text('bias').notNull(),
+	invite: text('invite'),
+	avatar: text('avatar').references(() => files.id, { onDelete: 'set null' }),
+	bloats: text('bloats'), // JSON array of patterns
+	status: text('status').notNull().default('pending'),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	reviewedAt: timestamp('reviewed_at', { withTimezone: true }),
+	reviewedBy: text('reviewed_by').references(() => users.id)
+});
+
 // Relations
 export const sourcesRelations = relations(sources, ({ many, one }) => ({
 	bloats: many(bloats),
+	avatarFile: one(files, {
+		fields: [sources.avatar],
+		references: [files.id]
+	}),
 	account: one(accounts, {
 		fields: [sources.apiId],
 		references: [accounts.accountId]
@@ -95,6 +175,61 @@ export const bloatsRelations = relations(bloats, ({ one }) => ({
 	})
 }));
 
+export const usersRelations = relations(users, ({ many }) => ({
+	sessions: many(sessions),
+	pendingEdits: many(pendingEdits),
+	pendingCreations: many(pendingCreations),
+	uploadedFiles: many(files)
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+	user: one(users, {
+		fields: [sessions.userId],
+		references: [users.id]
+	})
+}));
+
+export const filesRelations = relations(files, ({ one }) => ({
+	uploadedBy: one(users, {
+		fields: [files.uploadedBy],
+		references: [users.id]
+	})
+}));
+
+export const pendingEditsRelations = relations(pendingEdits, ({ one }) => ({
+	user: one(users, {
+		fields: [pendingEdits.userId],
+		references: [users.id]
+	}),
+	reviewer: one(users, {
+		fields: [pendingEdits.reviewedBy],
+		references: [users.id]
+	}),
+	channel: one(sources, {
+		fields: [pendingEdits.channelId],
+		references: [sources.channelId]
+	}),
+	avatarFile: one(files, {
+		fields: [pendingEdits.avatar],
+		references: [files.id]
+	})
+}));
+
+export const pendingCreationsRelations = relations(pendingCreations, ({ one }) => ({
+	user: one(users, {
+		fields: [pendingCreations.userId],
+		references: [users.id]
+	}),
+	reviewer: one(users, {
+		fields: [pendingCreations.reviewedBy],
+		references: [users.id]
+	}),
+	avatarFile: one(files, {
+		fields: [pendingCreations.avatar],
+		references: [files.id]
+	})
+}));
+
 // Type exports
 export type Source = typeof sources.$inferSelect;
 export type NewSource = typeof sources.$inferInsert;
@@ -104,3 +239,13 @@ export type Account = typeof accounts.$inferSelect;
 export type NewAccount = typeof accounts.$inferInsert;
 export type Bloat = typeof bloats.$inferSelect;
 export type NewBloat = typeof bloats.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;
+export type File = typeof files.$inferSelect;
+export type NewFile = typeof files.$inferInsert;
+export type PendingEdit = typeof pendingEdits.$inferSelect;
+export type NewPendingEdit = typeof pendingEdits.$inferInsert;
+export type PendingCreation = typeof pendingCreations.$inferSelect;
+export type NewPendingCreation = typeof pendingCreations.$inferInsert;

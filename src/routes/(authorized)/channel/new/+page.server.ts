@@ -1,9 +1,8 @@
 // src/routes/channel/new/+page.server.ts
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
-import { db, appDb } from '$lib/server/db';
-import { sources, bloats } from '$lib/server/schema';
-import { pendingCreations } from '$lib/server/app-schema';
+import { db } from '$lib/server/db';
+import { sources, bloats, pendingCreations } from '$lib/server/schema';
 import { superValidate } from 'sveltekit-superforms';
 import { valibot } from 'sveltekit-superforms/adapters';
 import { channelSchema } from './schema';
@@ -105,7 +104,7 @@ export const actions: Actions = {
 			// Non-admin: Insert pending creation for review
 			const bloatsJson = JSON.stringify(bloatPatterns || []);
 
-			await appDb.insert(pendingCreations).values({
+			await db.insert(pendingCreations).values({
 				userId: locals.user.id,
 				channelId: channelIdNum,
 				channelName,
